@@ -5,6 +5,8 @@
 #include "Planet.h"
 #include "Mesh.h"
 #include "Shader.h"
+#include "OBJMesh.h"
+
 #include <vector>
 
 class GraphicsApp : public aie::Application {
@@ -24,16 +26,51 @@ public:
 protected:
 
 	bool LaunchShaders();
+	void ImGUIRefresher();
+
+	bool QuadLoader();
+	void QuadDraw(glm::mat4 pvm);
+
+	bool CubeLoader();
+	void CubeDraw(glm::mat4 pvm);
+
+	bool BunnyLoader();
+	void BunnyDraw(glm::mat4 pvm);
+
+	bool SpearLoader();
+	void SpearDraw(glm::mat4 pvm, glm::mat4 transform);
+
+
+	void PhongDraw(glm::mat4 pvm, glm::mat4 transform);
 
 	// camera transforms
 	glm::mat4	m_viewMatrix;
 	glm::mat4	m_projectionMatrix;
 
 	aie::ShaderProgram m_simpleShader;
+	aie::ShaderProgram m_colorShader;
+	aie::ShaderProgram m_phongShader;
+
 	Mesh m_quadMesh;
 	glm::mat4 m_quadTransform;
 
-	std::vector<Planet*> m_planets;
+	Mesh m_cubeMesh;
+	glm::mat4 m_cubeTransform;
 
+	aie::OBJMesh m_bunnyMesh;
+	glm::mat4 m_bunnyTransform;
+
+	aie::OBJMesh m_spearMesh;
+	glm::mat4 m_spearTransform;
+
+	struct Light {
+		glm::vec3 direction;
+		glm::vec3 color;
+	};
+	Light m_light;
+	glm::vec3 m_ambientLight;
+
+	std::vector<Planet*> m_planets;
 	Planet* m_sun;
+	bool m_planetsOn = true;
 };

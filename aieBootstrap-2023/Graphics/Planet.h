@@ -7,7 +7,7 @@ public:
 	Planet(glm::mat4 _matrix, float _distFromSun, glm::vec4 _color, float _rotationSpeed, float _radius, bool _hasRing = false);
 	~Planet();
 
-	void Update(float _deltaTime, float _rotationTime);
+	void Update(float _deltaTime);
 	void Draw();
 
 	// getters
@@ -30,5 +30,6 @@ protected:
 	glm::vec4 m_color;
 	bool m_hasRing;
 	float m_axis = 0;
+	float m_rotation = 0;
 };
 

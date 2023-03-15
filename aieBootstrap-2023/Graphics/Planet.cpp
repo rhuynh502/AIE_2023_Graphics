@@ -16,11 +16,13 @@ Planet::~Planet()
 {
 }
 
-void Planet::Update(float _deltaTime, float _rotationTime)
+void Planet::Update(float _deltaTime)
 {
+	m_rotation += m_rotationSpeed * _deltaTime;
+
 	if (m_parentPlanet)
 		m_matrix[3] = glm::translate(glm::translate(glm::mat4(1), m_parentPlanet->GetPosition()),
-			glm::vec3(sin(_rotationTime * m_rotationSpeed) * m_distFromSun, m_axis * sin(_rotationTime * m_rotationSpeed) * m_distFromSun, cos(_rotationTime * m_rotationSpeed) * m_distFromSun))[3];
+			glm::vec3(sin(m_rotation) * m_distFromSun, m_axis * sin(m_rotation) * m_distFromSun, cos(m_rotation) * m_distFromSun))[3];
 
 	m_matrix = glm::rotate(m_matrix, _deltaTime * 0.2f, glm::vec3(0, 1, 0));
 }
