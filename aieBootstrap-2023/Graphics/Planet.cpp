@@ -24,7 +24,7 @@ void Planet::Update(float _deltaTime)
 		m_matrix[3] = glm::translate(glm::translate(glm::mat4(1), m_parentPlanet->GetPosition()),
 			glm::vec3(sin(m_rotation) * m_distFromSun, m_axis * sin(m_rotation) * m_distFromSun, cos(m_rotation) * m_distFromSun))[3];
 
-	m_matrix = glm::rotate(m_matrix, _deltaTime * 0.2f, glm::vec3(0, 1, 0));
+	m_matrix = glm::rotate(m_matrix, _deltaTime * 1.6f, glm::vec3(0, 1, 0));
 }
 
 void Planet::Draw()

@@ -93,7 +93,6 @@ void GraphicsApp::draw() {
 	m_projectionMatrix = m_camera.GetProjectionMatrix((float)getWindowWidth(),
 		(float)getWindowHeight());
 
-	// Draw the quad set up in QuadLoader()
 	auto pvm = m_projectionMatrix * m_viewMatrix;
 
 	if(m_cubeOn)
@@ -102,6 +101,8 @@ void GraphicsApp::draw() {
 	// Draw the bunny set up in BunnyLoader()
 		//BunnyDraw(pvm * m_bunnyTransform);
 
+	QuadTexturedDraw(pvm * m_quadTransform);
+
 	// Draw the light
 	if (m_bunnyOn)
 	{
@@ -109,7 +110,11 @@ void GraphicsApp::draw() {
 		SpearDraw(pvm * m_spearTransform, m_spearTransform);
 	}
 
-	CylinderDraw(pvm * m_cylinderTransform);
+	if(m_cylinderOn)
+		CylinderDraw(pvm * m_cylinderTransform);
+
+	if(m_pyramidOn)
+		PyramidDraw(pvm * m_pyramidTransform);
 
 	if(m_planetsOn)
 		for(auto planet : m_planets)
@@ -168,8 +173,8 @@ void GraphicsApp::InitialisePlanets()
 bool GraphicsApp::LaunchShaders()
 {
 	// Used to load quad
-	if (!QuadLoader())
-		return false;
+	/*if (!QuadLoader())
+		return false;*/
 
 	// Used to load cube
 	if (!CubeLoader())
@@ -183,7 +188,13 @@ bool GraphicsApp::LaunchShaders()
 	if (!SpearLoader())
 		return false;
 
-	if (!CylinderLoader(3, 3, 3))
+	if (!CylinderLoader(2, 1, 12))
+		return false;
+
+	if (!PyramidLoader())
+		return false;
+
+	if (!QuadTexturedLoader())
 		return false;
 
 	return true;
@@ -208,10 +219,19 @@ void GraphicsApp::ImGUIRefresher()
 	ImGui::Begin("Shapes Settings");
 	if (ImGui::Button(m_cubeOn ? "Cube off" : "Cube On"))
 		m_cubeOn = !m_cubeOn;
-	ImGui::DragFloat3("Position",
-		&m_cubeTransform[3][0]);
-	ImGui::DragFloat3("Position Cylinder",
-		&m_cylinderTransform[3][0]);
+	if(m_cubeOn)
+		ImGui::DragFloat3("Cube Position",
+			&m_cubeTransform[3][0]);
+	if (ImGui::Button(m_cylinderOn ? "Cylinder off" : "Cylinder On"))
+		m_cylinderOn = !m_cylinderOn;
+	if(m_cylinderOn)
+		ImGui::DragFloat3("Cylinder Position",
+			&m_cylinderTransform[3][0]);
+	if (ImGui::Button(m_pyramidOn ? "Pyramid off" : "Pyramid On"))
+		m_pyramidOn = !m_pyramidOn;
+	if(m_pyramidOn)
+		ImGui::DragFloat3("Pyramid Position",
+			&m_pyramidTransform[3][0]);
 	ImGui::End();
 }
 
@@ -283,7 +303,7 @@ bool GraphicsApp::CubeLoader()
 	// Defined as 4 vertices for the 2 triangles
 	Mesh::Vertex vertices[8];
 
-	glm::vec4 center = { 0, 0, 0, 0 };
+	glm::vec4 center = { 0, 1, 0, 0 };
 	float distFromCenter = 1;
 
 	vertices[0].position = { center.x + distFromCenter, center.y + distFromCenter, center.z + distFromCenter, 1 };
@@ -326,6 +346,50 @@ void GraphicsApp::CubeDraw(glm::mat4 pvm)
 
 	// Draw the quad using Mesh's draw
 	m_cubeMesh.Draw();
+}
+
+bool GraphicsApp::PyramidLoader()
+{
+	// Defined as 4 vertices for the 2 triangles
+	Mesh::Vertex vertices[5];
+
+	glm::vec4 center = { 0, 1, 0, 0 };
+	float distFromCenter = 1;
+
+	vertices[0].position = { center.x + distFromCenter, center.y - distFromCenter, center.z + distFromCenter, 1 };
+	vertices[1].position = { center.x + distFromCenter, center.y - distFromCenter, center.z - distFromCenter, 1 };
+	vertices[2].position = { center.x - distFromCenter, center.y - distFromCenter, center.z + distFromCenter, 1 };
+	vertices[3].position = { center.x - distFromCenter, center.y - distFromCenter, center.z - distFromCenter, 1 };
+	vertices[4].position = { 0, distFromCenter, 0, 1 };
+	
+	unsigned int indices[18] = { 4, 0, 1, 4, 1, 3,
+								 4, 3, 2, 4, 2, 0,
+								 1, 0, 3, 3, 0, 2};
+
+	m_pyramidMesh.Initialise(5, vertices, 18, indices);
+
+	//This is a 10 'unit' wide quad
+	m_pyramidTransform =
+	{
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	};
+
+	return true;
+}
+
+void GraphicsApp::PyramidDraw(glm::mat4 pvm)
+{
+	// Bind the shader
+	m_simpleShader.bind();
+
+	// Bind the transform
+	m_simpleShader.bindUniform("ProjectionViewModel", pvm);
+
+	// Draw the quad using Mesh's draw
+	m_pyramidMesh.Draw();
 }
 
 bool GraphicsApp::BunnyLoader()
@@ -437,25 +501,73 @@ bool GraphicsApp::CylinderLoader(float height, float radius, float segments)
 		return false;
 	}
 
-	Mesh::Vertex* vertices = new Mesh::Vertex[(segments + 1) * 2];
+	float verticesCount = (segments + 1) * 2;
 
-	vertices[0].position = { 0, 0, 0, 0 };
-	vertices[1].position = { 0, height, 0, 0 };
-	vertices[2].position = { 1, height, 0, 0 };
+	Mesh::Vertex* vertices = new Mesh::Vertex[verticesCount];
+
+	// Create center vertices for top and bottom
+	vertices[0].position = { 0, 0, 0, 1 };
+	vertices[1].position = { 0, height, 0, 1 };
+
+	// Create vertices for top circle and bottom circle
+	for (int i = 0; i < segments * 2; i++)
+	{
+		vertices[i + 2].position = {radius * glm::sin((i % (int)segments) * 2 * glm::pi<float>() / segments), 
+									i < segments ? 0 : height, 
+									radius * glm::cos((i % (int)segments) * 2 * glm::pi<float>() / segments), 1};
+	}
 
 	unsigned int* indices = new unsigned int[segments * 4 * 3];
 
-	indices[0] = 0;
-	indices[1] = 2;
-	indices[2] = 1;
+	// Create triangles for top circle
+	for (int i = 0; i < segments; i++)
+	{
+		indices[i * 3] = 0;
+		indices[i * 3 + 1] = i == segments - 1 ? 2 : 2 + i + 1;
+		indices[i * 3 + 2] = 2 + i;
+	}
 
-	m_cylinderMesh.Initialise(3, vertices, 3, indices);
+	// Create triangles for bot circle
+	for (int i = segments; i < segments * 2; i++)
+	{
+		indices[i * 3] = 1;
+		indices[i * 3 + 1] = 2 + i;
+		indices[i * 3 + 2] = i == segments * 2 - 1 ? 2 + segments : 2 + i + 1;
+	}
+
+	int startingPoint = 2;
+	int midPoint = verticesCount / 2 + 1;
+	int increment = 0;
+
+	// Create triangles for faces
+	for (int i = segments * 2; i < segments * 3; i++)
+	{
+		indices[i * 3] = startingPoint + increment;
+		indices[i * 3 + 1] = i == segments * 3 - 1 ? startingPoint : startingPoint + 1 + increment;
+		indices[i * 3 + 2] = i == segments * 3 - 1 ? midPoint : startingPoint + midPoint + increment - 1;
+		
+		increment++;
+	}
+	
+	increment = 0;
+
+	// Create triangles for faces
+	for (int i = segments * 3; i < segments * 4; i++)
+	{
+		indices[i * 3] = midPoint + increment;
+		indices[i * 3 + 1] = startingPoint + increment;
+		indices[i * 3 + 2] = i == segments * 4 - 1 ? midPoint: midPoint + 1 + increment;
+		
+		increment++;
+	}
+
+	m_cylinderMesh.Initialise(verticesCount, vertices, segments * 4 * 3, indices);
 
 	m_cylinderTransform =
 	{
-		10, 0, 0, 0,
-		0, 10, 0, 0,
-		0, 0, 10, 0,
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
 		0, 0, 0, 1
 	};
 
@@ -472,6 +584,58 @@ void GraphicsApp::CylinderDraw(glm::mat4 pvm)
 
 	// Draw the quad using Mesh's draw
 	m_cylinderMesh.Draw();
+}
+
+bool GraphicsApp::QuadTexturedLoader()
+{
+	m_texturedShader.loadShader(aie::eShaderStage::VERTEX,
+		"./shaders/textured.vert");
+	m_texturedShader.loadShader(aie::eShaderStage::FRAGMENT,
+		"./shaders/textured.frag");
+
+	if (!m_texturedShader.link())
+	{
+		printf("Textured Shader has an Error: %s\n",
+			m_texturedShader.getLastError());
+		return false;
+	}
+
+	if (!m_gridTexture.load("./textures/numbered_grid.tga"))
+	{
+		printf("Failed to load the grid texture correctly!\n");
+		return false;
+	}
+
+	m_quadMesh.InitialiseQuad();
+
+	//This is a 10 'unit' wide quad
+	m_quadTransform =
+	{
+		10, 0, 0, 0,
+		0, 10, 0, 0,
+		0, 0, 10, 0,
+		0, 0, 0, 1
+	};
+
+	return true;
+}
+
+void GraphicsApp::QuadTexturedDraw(glm::mat4 pvm)
+{
+	// Bind the shader
+	m_texturedShader.bind();
+
+	// Bind the transform
+	m_texturedShader.bindUniform("ProjectionViewModel", pvm);
+
+	// Bind the texture location
+	m_texturedShader.bindUniform("diffuseTexture", 0);
+
+	// Bind the texture to a specific location
+	m_gridTexture.bind(0);
+
+	// Draw the quad using Mesh's draw
+	m_quadMesh.Draw();
 }
 
 void GraphicsApp::PhongDraw(glm::mat4 pvm, glm::mat4 transform)
