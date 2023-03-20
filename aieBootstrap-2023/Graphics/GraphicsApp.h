@@ -6,6 +6,7 @@
 #include "Mesh.h"
 #include "Shader.h"
 #include "OBJMesh.h"
+#include "SimpleCamera.h"
 
 #include <vector>
 
@@ -40,6 +41,8 @@ protected:
 	bool SpearLoader();
 	void SpearDraw(glm::mat4 pvm, glm::mat4 transform);
 
+	bool CylinderLoader(float height, float radius, float segments);
+	void CylinderDraw(glm::mat4 pvm);
 
 	void PhongDraw(glm::mat4 pvm, glm::mat4 transform);
 
@@ -57,11 +60,16 @@ protected:
 	Mesh m_cubeMesh;
 	glm::mat4 m_cubeTransform;
 
+	Mesh m_cylinderMesh;
+	glm::mat4 m_cylinderTransform;
+
 	aie::OBJMesh m_bunnyMesh;
 	glm::mat4 m_bunnyTransform;
 
 	aie::OBJMesh m_spearMesh;
 	glm::mat4 m_spearTransform;
+
+	SimpleCamera m_camera;
 
 	struct Light {
 		glm::vec3 direction;
@@ -72,5 +80,7 @@ protected:
 
 	std::vector<Planet*> m_planets;
 	Planet* m_sun;
-	bool m_planetsOn = true;
+	bool m_planetsOn = false;
+	bool m_cubeOn = false;
+	bool m_bunnyOn = false;
 };

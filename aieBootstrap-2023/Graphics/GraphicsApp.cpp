@@ -74,6 +74,8 @@ void GraphicsApp::update(float deltaTime) {
 	// Rotate the light to emulate a 'day/night' cycle
 	m_light.direction = glm::normalize(glm::vec3(glm::cos(time * 2), glm::sin(time * 2), 0));
 
+	m_camera.Update(deltaTime);
+
 	if (input->isKeyDown(aie::INPUT_KEY_ESCAPE))
 		quit();
 
@@ -86,18 +88,28 @@ void GraphicsApp::draw() {
 	clearScreen();
 
 	// update perspective based on screen size
-	m_projectionMatrix = glm::perspective(glm::pi<float>() * 0.25f, getWindowWidth() / (float)getWindowHeight(), 0.1f, 1000.0f);
+	// create simple camera transforms
+	m_viewMatrix = m_camera.GetViewMatrix();
+	m_projectionMatrix = m_camera.GetProjectionMatrix((float)getWindowWidth(),
+		(float)getWindowHeight());
 
 	// Draw the quad set up in QuadLoader()
 	auto pvm = m_projectionMatrix * m_viewMatrix;
-	CubeDraw(pvm * m_cubeTransform);
+
+	if(m_cubeOn)
+		CubeDraw(pvm * m_cubeTransform);
 
 	// Draw the bunny set up in BunnyLoader()
-	//BunnyDraw(pvm * m_bunnyTransform);
+		//BunnyDraw(pvm * m_bunnyTransform);
 
 	// Draw the light
-	//PhongDraw(pvm * m_bunnyTransform, m_bunnyTransform);
-	//SpearDraw(pvm * m_spearTransform, m_spearTransform);
+	if (m_bunnyOn)
+	{
+		PhongDraw(pvm * m_bunnyTransform, m_bunnyTransform);
+		SpearDraw(pvm * m_spearTransform, m_spearTransform);
+	}
+
+	CylinderDraw(pvm * m_cylinderTransform);
 
 	if(m_planetsOn)
 		for(auto planet : m_planets)
@@ -171,6 +183,9 @@ bool GraphicsApp::LaunchShaders()
 	if (!SpearLoader())
 		return false;
 
+	if (!CylinderLoader(3, 3, 3))
+		return false;
+
 	return true;
 }
 
@@ -186,6 +201,17 @@ void GraphicsApp::ImGUIRefresher()
 	ImGui::Begin("Planets Settings");
 	if(ImGui::Button(m_planetsOn ? "DEACTIVATE BUNNY POWERS" : "ACTIVATE BUNNY POWERS"))
 		m_planetsOn = !m_planetsOn;
+	if(ImGui::Button(m_bunnyOn ? "DEACTIVATE BUNNY" : "ACTIVATE BUNNY"))
+		m_bunnyOn = !m_bunnyOn;
+	ImGui::End();
+
+	ImGui::Begin("Shapes Settings");
+	if (ImGui::Button(m_cubeOn ? "Cube off" : "Cube On"))
+		m_cubeOn = !m_cubeOn;
+	ImGui::DragFloat3("Position",
+		&m_cubeTransform[3][0]);
+	ImGui::DragFloat3("Position Cylinder",
+		&m_cylinderTransform[3][0]);
 	ImGui::End();
 }
 
@@ -269,12 +295,12 @@ bool GraphicsApp::CubeLoader()
 	vertices[6].position = { center.x - distFromCenter, center.y - distFromCenter, center.z - distFromCenter, 1 };
 	vertices[7].position = { center.x - distFromCenter, center.y + distFromCenter, center.z - distFromCenter, 1 };
 
-	unsigned int indices[36] = { 0, 1, 2, 2, 0, 3, 
-								 3, 5, 4, 4, 3, 0,
-								 0, 1, 4, 4, 1, 7,
-								 7, 4, 5, 5, 7, 6,
-								 4, 0, 3, 0, 2, 3,
-								 0, 1, 2, 0, 2, 3};
+	unsigned int indices[36] = { 0, 2, 1, 2, 0, 3, 
+								 4, 1, 5, 4, 0, 1,
+								 7, 5, 6, 7, 4, 5,
+								 3, 6, 2, 3, 7, 6,
+								 1, 6, 5, 1, 2, 6,
+								 4, 3, 0, 4, 7, 3 };
 
 	m_cubeMesh.Initialise(8, vertices, 36, indices);
 
@@ -296,7 +322,6 @@ void GraphicsApp::CubeDraw(glm::mat4 pvm)
 	m_simpleShader.bind();
 
 	// Bind the transform
-
 	m_simpleShader.bindUniform("ProjectionViewModel", pvm);
 
 	// Draw the quad using Mesh's draw
@@ -337,14 +362,14 @@ bool GraphicsApp::BunnyLoader()
 void GraphicsApp::BunnyDraw(glm::mat4 pvm)
 {
 	// Bind the shader
-	m_colorShader.bind();
+	m_phongShader.bind();
 
 	// Bind the transform
-	m_colorShader.bindUniform("ProjectionViewModel", pvm);
+	m_phongShader.bindUniform("ProjectionViewModel", pvm);
 
 	// Draw the quad using Mesh's draw
 
-	m_colorShader.bindUniform("BaseColor", glm::vec4(1, 1, 1, 1));
+	m_phongShader.bindUniform("BaseColor", glm::vec4(1, 1, 1, 1));
 
 	m_bunnyMesh.draw();
 }
@@ -398,6 +423,57 @@ void GraphicsApp::SpearDraw(glm::mat4 pvm, glm::mat4 transform)
 	m_spearMesh.draw();
 }
 
+bool GraphicsApp::CylinderLoader(float height, float radius, float segments)
+{
+	m_simpleShader.loadShader(aie::eShaderStage::VERTEX,
+		"./shaders/simple.vert");
+	m_simpleShader.loadShader(aie::eShaderStage::FRAGMENT,
+		"./shaders/simple.frag");
+
+	if (!m_simpleShader.link())
+	{
+		printf("Simple Shader has an Error: %s\n",
+			m_simpleShader.getLastError());
+		return false;
+	}
+
+	Mesh::Vertex* vertices = new Mesh::Vertex[(segments + 1) * 2];
+
+	vertices[0].position = { 0, 0, 0, 0 };
+	vertices[1].position = { 0, height, 0, 0 };
+	vertices[2].position = { 1, height, 0, 0 };
+
+	unsigned int* indices = new unsigned int[segments * 4 * 3];
+
+	indices[0] = 0;
+	indices[1] = 2;
+	indices[2] = 1;
+
+	m_cylinderMesh.Initialise(3, vertices, 3, indices);
+
+	m_cylinderTransform =
+	{
+		10, 0, 0, 0,
+		0, 10, 0, 0,
+		0, 0, 10, 0,
+		0, 0, 0, 1
+	};
+
+	return true;
+}
+
+void GraphicsApp::CylinderDraw(glm::mat4 pvm)
+{
+	// Bind the shader
+	m_simpleShader.bind();
+
+	// Bind the transform
+	m_simpleShader.bindUniform("ProjectionViewModel", pvm);
+
+	// Draw the quad using Mesh's draw
+	m_cylinderMesh.Draw();
+}
+
 void GraphicsApp::PhongDraw(glm::mat4 pvm, glm::mat4 transform)
 {
 	// Bind the phong shader
@@ -420,3 +496,4 @@ void GraphicsApp::PhongDraw(glm::mat4 pvm, glm::mat4 transform)
 
 	m_bunnyMesh.draw();
 }
+
