@@ -30,13 +30,18 @@ bool GraphicsApp::startup() {
 	m_viewMatrix = glm::lookAt(vec3(10), vec3(0), vec3(0, 1, 0));
 	m_projectionMatrix = glm::perspective(glm::pi<float>() * 0.25f, 16.0f / 9.0f, 0.1f, 1000.0f);
 
-	m_light.color = { 1, 1, 0 };
 	m_ambientLight = { 0.5, 0.5, 0.5 };
 
 	InitialisePlanets();
 
-	m_stationaryCamera.SetPosition(glm::vec3(10, 10, 0));
+	m_stationaryCamera.SetPosition(glm::vec3(10, 5, 0));
 	m_stationaryCamera.SetRotation(glm::vec3(180, 0, 0));
+
+	Light light;
+	light.color = { 1, 1, 1 };
+
+	m_scene = new Scene(m_mainCamera, glm::vec2(getWindowWidth(), getWindowHeight()),
+		light, m_ambientLight);
 
 	return LaunchShaders();
 }
@@ -44,6 +49,7 @@ bool GraphicsApp::startup() {
 void GraphicsApp::shutdown() {
 
 	Gizmos::destroy();
+	delete m_scene;
 }
 
 void GraphicsApp::update(float deltaTime) {
@@ -76,7 +82,7 @@ void GraphicsApp::update(float deltaTime) {
 	aie::Input* input = aie::Input::getInstance();
 
 	// Rotate the light to emulate a 'day/night' cycle
-	m_light.direction = glm::normalize(glm::vec3(glm::cos(time * 2), glm::sin(time * 2), 0));
+	//m_light.direction = glm::normalize(glm::vec3(glm::cos(time * 2), glm::sin(time * 2), 0));
 
 	m_mainCamera->Update(deltaTime);
 	//m_stationaryCamera.Update(deltaTime);
@@ -100,13 +106,16 @@ void GraphicsApp::draw() {
 
 	auto pvm = m_projectionMatrix * m_viewMatrix;
 
+	m_scene->Draw();
+
 	if(m_cubeOn)
 		CubeDraw(pvm * m_cubeTransform);
 
 	// Draw the bunny set up in BunnyLoader()
 		//BunnyDraw(pvm * m_bunnyTransform);
 
-	QuadTexturedDraw(pvm * m_quadTransform);
+	if(m_quadOn)
+		QuadTexturedDraw(pvm * m_quadTransform);
 
 	// Draw the light
 	if (m_bunnyOn)
@@ -126,6 +135,8 @@ void GraphicsApp::draw() {
 			planet->Draw();
 
 	OBJDraw(pvm, m_robotTransform, &m_robotMesh);
+	//OBJDraw(pvm, m_saberTransform, &m_saberMesh);
+	
 
 	Gizmos::draw(m_projectionMatrix * m_viewMatrix);
 }
@@ -218,47 +229,57 @@ bool GraphicsApp::LaunchShaders()
 	if (!RobotLoader())
 		return false;
 
+	/*if (!SaberLoader())
+		return false;*/
+
+	m_scene->AddInstance(new Instance(m_spearTransform, &m_spearMesh,
+		&m_normallitShader));
+
 	return true;
 }
 
 void GraphicsApp::ImGUIRefresher()
 {
-	ImGui::Begin("Light Settings");
-	ImGui::DragFloat3("Global Light Color", 
-		&m_light.color[0], 0.1, 0, 1);
-	ImGui::DragFloat3("Global Light Direction",
-		&m_light.direction[0], 0.1, -1, 1);
-	ImGui::CollapsingHeader("Camera Settings");
+	ImGui::Begin("Settings");
+	/*ImGui::DragFloat3("Global Light Color", 
+		&m_light.color[0], 0.1, 0, 1);*/
+	/*ImGui::DragFloat3("Global Light Direction",
+		&m_light.direction[0], 0.1, -1, 1);*/
+	if (ImGui::CollapsingHeader("Camera Settings"))
+	{
 		if (ImGui::Button("StationaryCamera"))
 			m_mainCamera = &m_stationaryCamera;
 		if (ImGui::Button("FlyCamera"))
 			m_mainCamera = &m_camera;
+	}
 
-	ImGui::End();
+	if (ImGui::CollapsingHeader("Planets Settings"))
+	{
+		if(ImGui::Button(m_planetsOn ? "DEACTIVATE BUNNY POWERS" : "ACTIVATE BUNNY POWERS"))
+			m_planetsOn = !m_planetsOn;
+		if(ImGui::Button(m_bunnyOn ? "DEACTIVATE BUNNY" : "ACTIVATE BUNNY"))
+			m_bunnyOn = !m_bunnyOn;
+	}
 
-	ImGui::Begin("Planets Settings");
-	if(ImGui::Button(m_planetsOn ? "DEACTIVATE BUNNY POWERS" : "ACTIVATE BUNNY POWERS"))
-		m_planetsOn = !m_planetsOn;
-	if(ImGui::Button(m_bunnyOn ? "DEACTIVATE BUNNY" : "ACTIVATE BUNNY"))
-		m_bunnyOn = !m_bunnyOn;
-	ImGui::End();
-
-	ImGui::Begin("Shapes Settings");
-	if (ImGui::Button(m_cubeOn ? "Cube off" : "Cube On"))
-		m_cubeOn = !m_cubeOn;
-	if(m_cubeOn)
-		ImGui::DragFloat3("Cube Position",
-			&m_cubeTransform[3][0]);
-	if (ImGui::Button(m_cylinderOn ? "Cylinder off" : "Cylinder On"))
-		m_cylinderOn = !m_cylinderOn;
-	if(m_cylinderOn)
-		ImGui::DragFloat3("Cylinder Position",
-			&m_cylinderTransform[3][0]);
-	if (ImGui::Button(m_pyramidOn ? "Pyramid off" : "Pyramid On"))
-		m_pyramidOn = !m_pyramidOn;
-	if(m_pyramidOn)
-		ImGui::DragFloat3("Pyramid Position",
-			&m_pyramidTransform[3][0]);
+	if (ImGui::CollapsingHeader("Shapes Settings"))
+	{
+		ImGui::Checkbox(!m_cubeOn ? "Cube off" : "Cube On", &m_cubeOn);
+		if(m_cubeOn)
+			ImGui::DragFloat3("Cube Position",
+				&m_cubeTransform[3][0]);
+		ImGui::Checkbox(!m_cylinderOn ? "Cylinder off" : "Cylinder On", &m_cylinderOn);
+		if(m_cylinderOn)
+			ImGui::DragFloat3("Cylinder Position",
+				&m_cylinderTransform[3][0]);
+		ImGui::Checkbox(!m_quadOn ? "Quad off" : "Quad On", &m_quadOn);
+		if(m_quadOn)
+			ImGui::DragFloat3("Quad Position",
+				&m_quadTransform[3][0]);
+		ImGui::Checkbox(!m_pyramidOn ? "Pyramid off" : "Pyramid On", &m_pyramidOn);
+		if(m_pyramidOn)
+			ImGui::DragFloat3("Pyramid Position",
+				&m_pyramidTransform[3][0]);
+	}
 	ImGui::End();
 }
 
@@ -525,6 +546,26 @@ bool GraphicsApp::RobotLoader()
 		0, 0, 0, 1
 	};
 	
+	return true;
+}
+
+bool GraphicsApp::SaberLoader()
+{
+	if (!m_saberMesh.load("./saber/source/SaberLily75/SaberLily1.obj", true, true
+	))
+	{
+		printf("Saber Mesh has an Error!\n");
+		return false;
+	}
+
+	m_saberTransform =
+	{
+		0.01f, 0, 0, 0,
+		0, 0, -0.01f, 0,
+		0, 0.01f, 0, 0,
+		0, 1, 0, 1
+	};
+
 	return true;
 }
 
