@@ -7,6 +7,7 @@
 #include "Shader.h"
 #include "OBJMesh.h"
 #include "SimpleCamera.h"
+#include "StationaryCamera.h"
 
 #include <vector>
 
@@ -42,7 +43,9 @@ protected:
 	void BunnyDraw(glm::mat4 pvm);
 
 	bool SpearLoader();
-	void SpearDraw(glm::mat4 pvm, glm::mat4 transform);
+	void OBJDraw(glm::mat4 pvm, glm::mat4 transform, aie::OBJMesh* objMesh);
+
+	bool RobotLoader();
 
 	bool CylinderLoader(float height, float radius, float segments);
 	void CylinderDraw(glm::mat4 pvm);
@@ -62,6 +65,7 @@ protected:
 	aie::ShaderProgram m_colorShader;
 	aie::ShaderProgram m_phongShader;
 	aie::ShaderProgram m_texturedShader;
+	aie::ShaderProgram m_normallitShader;
 
 	Mesh m_quadMesh;
 	glm::mat4 m_quadTransform;
@@ -81,7 +85,12 @@ protected:
 	aie::OBJMesh m_spearMesh;
 	glm::mat4 m_spearTransform;
 
+	aie::OBJMesh m_robotMesh;
+	glm::mat4 m_robotTransform;
+
+	SimpleCamera* m_mainCamera;
 	SimpleCamera m_camera;
+	StationaryCamera m_stationaryCamera;
 
 	struct Light {
 		glm::vec3 direction;

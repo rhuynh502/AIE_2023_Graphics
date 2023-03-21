@@ -172,6 +172,7 @@
     <ClCompile Include="RenderTarget.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="SimpleCamera.cpp" />
+    <ClCompile Include="StationaryCamera.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GraphicsApp.h" />
@@ -181,6 +182,7 @@
     <ClInclude Include="RenderTarget.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="SimpleCamera.h" />
+    <ClInclude Include="StationaryCamera.h" />
     <ClInclude Include="tiny_obj_loader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

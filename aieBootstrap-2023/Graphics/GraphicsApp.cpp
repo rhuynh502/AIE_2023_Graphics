@@ -11,7 +11,7 @@ using glm::mat4;
 using aie::Gizmos;
 
 GraphicsApp::GraphicsApp() {
-
+	
 }
 
 GraphicsApp::~GraphicsApp() {
@@ -19,7 +19,8 @@ GraphicsApp::~GraphicsApp() {
 }
 
 bool GraphicsApp::startup() {
-	
+	m_mainCamera = &m_camera;
+
 	setBackgroundColour(0.25f, 0.25f, 0.25f);
 
 	// initialise gizmo primitive counts
@@ -33,6 +34,9 @@ bool GraphicsApp::startup() {
 	m_ambientLight = { 0.5, 0.5, 0.5 };
 
 	InitialisePlanets();
+
+	m_stationaryCamera.SetPosition(glm::vec3(10, 10, 0));
+	m_stationaryCamera.SetRotation(glm::vec3(180, 0, 0));
 
 	return LaunchShaders();
 }
@@ -74,7 +78,8 @@ void GraphicsApp::update(float deltaTime) {
 	// Rotate the light to emulate a 'day/night' cycle
 	m_light.direction = glm::normalize(glm::vec3(glm::cos(time * 2), glm::sin(time * 2), 0));
 
-	m_camera.Update(deltaTime);
+	m_mainCamera->Update(deltaTime);
+	//m_stationaryCamera.Update(deltaTime);
 
 	if (input->isKeyDown(aie::INPUT_KEY_ESCAPE))
 		quit();
@@ -89,8 +94,8 @@ void GraphicsApp::draw() {
 
 	// update perspective based on screen size
 	// create simple camera transforms
-	m_viewMatrix = m_camera.GetViewMatrix();
-	m_projectionMatrix = m_camera.GetProjectionMatrix((float)getWindowWidth(),
+	m_viewMatrix = m_mainCamera->GetViewMatrix();
+	m_projectionMatrix = m_mainCamera->GetProjectionMatrix((float)getWindowWidth(),
 		(float)getWindowHeight());
 
 	auto pvm = m_projectionMatrix * m_viewMatrix;
@@ -107,7 +112,7 @@ void GraphicsApp::draw() {
 	if (m_bunnyOn)
 	{
 		PhongDraw(pvm * m_bunnyTransform, m_bunnyTransform);
-		SpearDraw(pvm * m_spearTransform, m_spearTransform);
+		OBJDraw(pvm, m_spearTransform, &m_spearMesh);
 	}
 
 	if(m_cylinderOn)
@@ -119,6 +124,8 @@ void GraphicsApp::draw() {
 	if(m_planetsOn)
 		for(auto planet : m_planets)
 			planet->Draw();
+
+	OBJDraw(pvm, m_robotTransform, &m_robotMesh);
 
 	Gizmos::draw(m_projectionMatrix * m_viewMatrix);
 }
@@ -172,6 +179,17 @@ void GraphicsApp::InitialisePlanets()
 
 bool GraphicsApp::LaunchShaders()
 {
+	m_normallitShader.loadShader(aie::eShaderStage::VERTEX,
+		"./shaders/normallit.vert");
+	m_normallitShader.loadShader(aie::eShaderStage::FRAGMENT,
+		"./shaders/normallit.frag");
+
+	if (!m_normallitShader.link())
+	{
+		printf("Shader Error %s\n", m_normallitShader.getLastError());
+		return false;
+	}
+
 	// Used to load quad
 	/*if (!QuadLoader())
 		return false;*/
@@ -197,6 +215,9 @@ bool GraphicsApp::LaunchShaders()
 	if (!QuadTexturedLoader())
 		return false;
 
+	if (!RobotLoader())
+		return false;
+
 	return true;
 }
 
@@ -207,6 +228,12 @@ void GraphicsApp::ImGUIRefresher()
 		&m_light.color[0], 0.1, 0, 1);
 	ImGui::DragFloat3("Global Light Direction",
 		&m_light.direction[0], 0.1, -1, 1);
+	ImGui::CollapsingHeader("Camera Settings");
+		if (ImGui::Button("StationaryCamera"))
+			m_mainCamera = &m_stationaryCamera;
+		if (ImGui::Button("FlyCamera"))
+			m_mainCamera = &m_camera;
+
 	ImGui::End();
 
 	ImGui::Begin("Planets Settings");
@@ -440,19 +467,7 @@ void GraphicsApp::BunnyDraw(glm::mat4 pvm)
 
 bool GraphicsApp::SpearLoader()
 {
-	m_phongShader.loadShader(aie::eShaderStage::VERTEX,
-		"./shaders/phong.vert");
-	m_phongShader.loadShader(aie::eShaderStage::FRAGMENT,
-		"./shaders/phong.frag");
-
-	if (!m_phongShader.link())
-	{
-		printf("Color Shader has an Error: %s\n",
-			m_phongShader.getLastError());
-		return false;
-	}
-
-	if (!m_spearMesh.load("./soulspear/soulspear.obj"))
+	if (!m_spearMesh.load("./soulspear/soulspear.obj", true, true))
 	{
 		printf("SoulSpear Mesh has an Error!\n");
 		return false;
@@ -469,22 +484,48 @@ bool GraphicsApp::SpearLoader()
 	return true;
 }
 
-void GraphicsApp::SpearDraw(glm::mat4 pvm, glm::mat4 transform)
+void GraphicsApp::OBJDraw(glm::mat4 pvm, glm::mat4 transform, aie::OBJMesh* objMesh)
 {
 	// Bind the phong shader
-	m_phongShader.bind();
+	m_normallitShader.bind();
+
+	m_normallitShader.bindUniform("CameraPosition",
+		glm::vec3(glm::inverse(m_viewMatrix)[3]));
 
 	// Bind the directional light we defined
-	m_phongShader.bindUniform("LightDirection", m_light.direction);
-	m_phongShader.bindUniform("AmbientColor", m_ambientLight);
-	m_phongShader.bindUniform("LightColor", m_light.color);
+	m_normallitShader.bindUniform("LightDirection", m_light.direction);
+	m_normallitShader.bindUniform("AmbientColor", m_ambientLight);
+	m_normallitShader.bindUniform("LightColor", m_light.color);
+
+	//Bind Texture location
+	m_normallitShader.bindUniform("diffuseTexture", 0);
 
 	// Bind the pvm using the one provided
-	m_phongShader.bindUniform("ProjectionViewModel", pvm);
+	m_normallitShader.bindUniform("ProjectionViewModel", pvm * transform);
 
 	// Bind the transform using the one provided
-	m_phongShader.bindUniform("ModelMatrix", transform);
-	m_spearMesh.draw();
+	m_normallitShader.bindUniform("ModelMatrix", transform);
+	objMesh->draw();
+}
+
+bool GraphicsApp::RobotLoader()
+{
+	if (!m_robotMesh.load("./robo-obj-pose4/robo-obj-pose4.obj", true, true
+	))
+	{
+		printf("Robot Mesh has an Error!\n");
+		return false;
+	}
+
+	m_robotTransform =
+	{
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	};
+	
+	return true;
 }
 
 bool GraphicsApp::CylinderLoader(float height, float radius, float segments)

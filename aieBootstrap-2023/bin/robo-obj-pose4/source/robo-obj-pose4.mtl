@@ -1,0 +1,13 @@
+#
+#
+#
+
+newmtl LP_Body
+illum 2
+Ka 0.000000 0.000000 0.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ns 20.000000
+map_Kd robo-obj-pose4_diffuse.tga
+map_Ks robo-obj-pose4_specular.tga
+bump robo-obj-pose4_normal.tga

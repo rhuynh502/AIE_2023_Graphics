@@ -45,6 +45,9 @@
     <ClCompile Include="SimpleCamera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="StationaryCamera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GraphicsApp.h">
@@ -69,6 +72,9 @@
       <Filter>Header Files\Provided</Filter>
     </ClInclude>
     <ClInclude Include="SimpleCamera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="StationaryCamera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
