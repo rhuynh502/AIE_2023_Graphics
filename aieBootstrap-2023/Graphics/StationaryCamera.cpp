@@ -1,6 +1,11 @@
 #include "StationaryCamera.h"
 #include "glm/ext.hpp"
 
+StationaryCamera::StationaryCamera()
+{
+	m_rotationSpeed = 0;
+}
+
 void StationaryCamera::Update(float deltaTime)
 {
 	

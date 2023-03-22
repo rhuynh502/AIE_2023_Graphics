@@ -39,9 +39,13 @@ bool GraphicsApp::startup() {
 
 	Light light;
 	light.color = { 1, 1, 1 };
+	light.direction = { 1, -1, 1 };
 
 	m_scene = new Scene(m_mainCamera, glm::vec2(getWindowWidth(), getWindowHeight()),
 		light, m_ambientLight);
+
+	m_scene->AddPointLights(glm::vec3(5, 3, 0), glm::vec3(1, 0, 0), 30);
+	m_scene->AddPointLights(glm::vec3(-5, 3, 0), glm::vec3(0, 0, 1), 30);
 
 	return LaunchShaders();
 }
@@ -82,7 +86,7 @@ void GraphicsApp::update(float deltaTime) {
 	aie::Input* input = aie::Input::getInstance();
 
 	// Rotate the light to emulate a 'day/night' cycle
-	//m_light.direction = glm::normalize(glm::vec3(glm::cos(time * 2), glm::sin(time * 2), 0));
+	m_scene->GetLight().direction = glm::normalize(glm::vec3(glm::cos(time * 2), glm::sin(time * 2), 0));
 
 	m_mainCamera->Update(deltaTime);
 	//m_stationaryCamera.Update(deltaTime);
@@ -104,39 +108,33 @@ void GraphicsApp::draw() {
 	m_projectionMatrix = m_mainCamera->GetProjectionMatrix((float)getWindowWidth(),
 		(float)getWindowHeight());
 
-	auto pvm = m_projectionMatrix * m_viewMatrix;
+	auto pv = m_projectionMatrix * m_viewMatrix;
 
 	m_scene->Draw();
 
 	if(m_cubeOn)
-		CubeDraw(pvm * m_cubeTransform);
-
-	// Draw the bunny set up in BunnyLoader()
-		//BunnyDraw(pvm * m_bunnyTransform);
+		CubeDraw(pv * m_cubeTransform);
 
 	if(m_quadOn)
-		QuadTexturedDraw(pvm * m_quadTransform);
+		QuadTexturedDraw(pv * m_quadTransform);
 
-	// Draw the light
 	if (m_bunnyOn)
 	{
-		PhongDraw(pvm * m_bunnyTransform, m_bunnyTransform);
-		OBJDraw(pvm, m_spearTransform, &m_spearMesh);
+		PhongDraw(pv * m_bunnyTransform, m_bunnyTransform);
+		OBJDraw(pv, m_spearTransform, &m_spearMesh);
 	}
 
 	if(m_cylinderOn)
-		CylinderDraw(pvm * m_cylinderTransform);
+		CylinderDraw(pv * m_cylinderTransform);
 
 	if(m_pyramidOn)
-		PyramidDraw(pvm * m_pyramidTransform);
+		PyramidDraw(pv * m_pyramidTransform);
 
 	if(m_planetsOn)
 		for(auto planet : m_planets)
 			planet->Draw();
 
-	OBJDraw(pvm, m_robotTransform, &m_robotMesh);
-	//OBJDraw(pvm, m_saberTransform, &m_saberMesh);
-	
+	//OBJDraw(pvm, m_robotTransform, &m_robotMesh);
 
 	Gizmos::draw(m_projectionMatrix * m_viewMatrix);
 }
@@ -201,10 +199,6 @@ bool GraphicsApp::LaunchShaders()
 		return false;
 	}
 
-	// Used to load quad
-	/*if (!QuadLoader())
-		return false;*/
-
 	// Used to load cube
 	if (!CubeLoader())
 		return false;
@@ -229,11 +223,9 @@ bool GraphicsApp::LaunchShaders()
 	if (!RobotLoader())
 		return false;
 
-	/*if (!SaberLoader())
-		return false;*/
-
-	m_scene->AddInstance(new Instance(m_spearTransform, &m_spearMesh,
-		&m_normallitShader));
+	for(int i = 0; i < 10; i++)
+		m_scene->AddInstance(new Instance(glm::vec3(i * 2, 0, 0), glm::vec3(0, i * 30, 0),
+			glm::vec3(1, 1, 1), &m_spearMesh, &m_normallitShader));
 
 	return true;
 }
@@ -241,16 +233,37 @@ bool GraphicsApp::LaunchShaders()
 void GraphicsApp::ImGUIRefresher()
 {
 	ImGui::Begin("Settings");
-	/*ImGui::DragFloat3("Global Light Color", 
-		&m_light.color[0], 0.1, 0, 1);*/
-	/*ImGui::DragFloat3("Global Light Direction",
-		&m_light.direction[0], 0.1, -1, 1);*/
+	ImGui::DragFloat3("Global Light Color", 
+		&m_scene->GetLight().color[0], 0.1, 0, 1);
+	ImGui::DragFloat3("Global Light Direction",
+		&m_scene->GetLight().direction[0], 0.1, -1, 1);
 	if (ImGui::CollapsingHeader("Camera Settings"))
 	{
 		if (ImGui::Button("StationaryCamera"))
+		{
 			m_mainCamera = &m_stationaryCamera;
+			m_scene->SetCamera(m_mainCamera);
+			m_inFlyCam = false;
+		}
 		if (ImGui::Button("FlyCamera"))
+		{
 			m_mainCamera = &m_camera;
+			m_scene->SetCamera(m_mainCamera);
+			m_inFlyCam = true;
+		}
+		if (m_inFlyCam)
+		{
+			auto rotSpeed = m_mainCamera->GetRotationSpeed();
+			if (ImGui::DragFloat("Rotation Speed", rotSpeed,
+				0.1f, 0.1f, 40.f))
+				m_mainCamera->SetRotationSpeed(*rotSpeed);
+			auto flySpeed = m_camera.GetSpeed();
+			if (ImGui::DragFloat("Movement Speed", flySpeed,
+				0.1f, 0.1f, 5.f))
+			{
+				m_camera.SetSpeed(*flySpeed);
+			}
+		}
 	}
 
 	if (ImGui::CollapsingHeader("Planets Settings"))
@@ -514,9 +527,9 @@ void GraphicsApp::OBJDraw(glm::mat4 pvm, glm::mat4 transform, aie::OBJMesh* objM
 		glm::vec3(glm::inverse(m_viewMatrix)[3]));
 
 	// Bind the directional light we defined
-	m_normallitShader.bindUniform("LightDirection", m_light.direction);
+	m_normallitShader.bindUniform("LightDirection", m_scene->GetLight().direction);
 	m_normallitShader.bindUniform("AmbientColor", m_ambientLight);
-	m_normallitShader.bindUniform("LightColor", m_light.color);
+	m_normallitShader.bindUniform("LightColor", m_scene->GetLight().color);
 
 	//Bind Texture location
 	m_normallitShader.bindUniform("diffuseTexture", 0);
@@ -527,6 +540,11 @@ void GraphicsApp::OBJDraw(glm::mat4 pvm, glm::mat4 transform, aie::OBJMesh* objM
 	// Bind the transform using the one provided
 	m_normallitShader.bindUniform("ModelMatrix", transform);
 	objMesh->draw();
+}
+
+bool GraphicsApp::OBJLoader(aie::OBJMesh& objMesh, glm::mat4& transform, float scale, const char* filepath, bool flipTexture)
+{
+	return false;
 }
 
 bool GraphicsApp::RobotLoader()
@@ -540,32 +558,12 @@ bool GraphicsApp::RobotLoader()
 
 	m_robotTransform =
 	{
-		1, 0, 0, 0,
-		0, 1, 0, 0,
-		0, 0, 1, 0,
+		0.3f, 0, 0, 0,
+		0, 0.3f, 0, 0,
+		0, 0, 0.3f, 0,
 		0, 0, 0, 1
 	};
 	
-	return true;
-}
-
-bool GraphicsApp::SaberLoader()
-{
-	if (!m_saberMesh.load("./saber/source/SaberLily75/SaberLily1.obj", true, true
-	))
-	{
-		printf("Saber Mesh has an Error!\n");
-		return false;
-	}
-
-	m_saberTransform =
-	{
-		0.01f, 0, 0, 0,
-		0, 0, -0.01f, 0,
-		0, 0.01f, 0, 0,
-		0, 1, 0, 1
-	};
-
 	return true;
 }
 
@@ -730,9 +728,9 @@ void GraphicsApp::PhongDraw(glm::mat4 pvm, glm::mat4 transform)
 		glm::vec3(glm::inverse(m_viewMatrix)[3]));
 
 	// Bind the directional light we defined
-	m_phongShader.bindUniform("LightDirection", m_light.direction);
+	m_phongShader.bindUniform("LightDirection", m_scene->GetLight().direction);
 	m_phongShader.bindUniform("AmbientColor", m_ambientLight);
-	m_phongShader.bindUniform("LightColor", m_light.color);
+	m_phongShader.bindUniform("LightColor", m_scene->GetLight().color);
 
 	// Bind the pvm using the one provided
 	m_phongShader.bindUniform("ProjectionViewModel", pvm);

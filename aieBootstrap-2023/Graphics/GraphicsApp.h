@@ -10,6 +10,7 @@
 #include "StationaryCamera.h"
 #include "Scene.h"
 #include "Instance.h"
+#include "FlyCamera.h"
 
 #include <vector>
 
@@ -47,8 +48,10 @@ protected:
 	bool SpearLoader();
 	void OBJDraw(glm::mat4 pvm, glm::mat4 transform, aie::OBJMesh* objMesh);
 
+	bool OBJLoader(aie::OBJMesh& objMesh, glm::mat4& transform,
+		float scale, const char* filepath, bool flipTexture);
+
 	bool RobotLoader();
-	bool SaberLoader();
 
 	bool CylinderLoader(float height, float radius, float segments);
 	void CylinderDraw(glm::mat4 pvm);
@@ -93,18 +96,15 @@ protected:
 	aie::OBJMesh m_robotMesh;
 	glm::mat4 m_robotTransform;
 
-	aie::OBJMesh m_saberMesh;
-	glm::mat4 m_saberTransform;
-
 	SimpleCamera* m_mainCamera;
-	SimpleCamera m_camera;
+	FlyCamera m_camera;
 	StationaryCamera m_stationaryCamera;
 
 	//struct Light {
 	//	glm::vec3 direction;
 	//	glm::vec3 color;
 	//};
-	Light m_light;
+	//Light m_light;
 	glm::vec3 m_ambientLight;
 
 	std::vector<Planet*> m_planets;
@@ -115,4 +115,7 @@ protected:
 	bool m_pyramidOn = false;
 	bool m_bunnyOn = false;
 	bool m_quadOn = false;
+	bool m_inFlyCam = true;
+
+	float m_rotSpeed = 1;
 };

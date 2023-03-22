@@ -164,6 +164,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="FlyCamera.cpp" />
     <ClCompile Include="GraphicsApp.cpp" />
     <ClCompile Include="Instance.cpp" />
     <ClCompile Include="main.cpp" />
@@ -177,6 +178,7 @@
     <ClCompile Include="StationaryCamera.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="FlyCamera.h" />
     <ClInclude Include="GraphicsApp.h" />
     <ClInclude Include="Instance.h" />
     <ClInclude Include="Mesh.h" />

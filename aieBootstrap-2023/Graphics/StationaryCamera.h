@@ -4,6 +4,7 @@
 class StationaryCamera : public SimpleCamera
 {
 public:
+	StationaryCamera();
 
 	void Update(float deltaTime);
 
