@@ -80,11 +80,14 @@ void Planet::ImGui()
 	ImGui::DragFloat("Speed", &m_rotationSpeed, 0.05f);
 	ImGui::DragFloat3("Color", &m_color[0], 0.05f, 0.f, 1.f);
 
-	for (auto planet : m_childrenPlanets)
+	if (ImGui::CollapsingHeader("Children"))
 	{
-		if (ImGui::Button(planet->GetName()))
+		for (auto planet : m_childrenPlanets)
 		{
-			planet->TogglePlanet();
+			if (ImGui::Button(planet->GetName()))
+			{
+				planet->TogglePlanet();
+			}
 		}
 	}
 

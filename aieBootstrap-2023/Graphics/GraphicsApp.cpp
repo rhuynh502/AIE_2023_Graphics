@@ -44,8 +44,8 @@ bool GraphicsApp::startup() {
 	m_scene = new Scene(m_mainCamera, glm::vec2(getWindowWidth(), getWindowHeight()),
 		light, m_ambientLight);
 
-	m_scene->AddPointLights(glm::vec3(3, 2, -1), glm::vec3(1, 0, 0), 30);
-	m_scene->AddPointLights(glm::vec3(3, 2, 1), glm::vec3(0, 0, 1), 30);
+	m_scene->AddPointLights(glm::vec3(-3, 2, 0), glm::vec3(1, 0, 0), 30);
+	m_scene->AddPointLights(glm::vec3(3, 2, 0), glm::vec3(0, 0, 1), 30);
 
 	return LaunchShaders();
 }
@@ -130,7 +130,7 @@ void GraphicsApp::draw() {
 
 	m_sun->Draw();
 
-	//OBJDraw(pvm, m_robotTransform, &m_robotMesh);
+	//OBJDraw(pv, m_robotTransform, &m_robotMesh);
 
 	Gizmos::draw(m_projectionMatrix * m_viewMatrix);
 }
@@ -209,9 +209,9 @@ bool GraphicsApp::LaunchShaders()
 	if (!RobotLoader())
 		return false;
 
-	for(int i = 0; i < 10; i++)
-		m_scene->AddInstance(new Instance(glm::vec3(i * 2, 0, 0), glm::vec3(0, i * 30, 0),
-			glm::vec3(1, 1, 1), &m_spearMesh, &m_normallitShader));
+	for(int i = 0; i < 6; i++)
+		m_scene->AddInstance(new Instance(glm::vec3(-21 + (i * 7), 0, 0), glm::vec3(0, i * 30, 0),
+			glm::vec3(1, 1, 1), &m_robotMesh, &m_normallitShader));
 
 	return true;
 }
@@ -220,9 +220,9 @@ void GraphicsApp::ImGUIRefresher()
 {
 	ImGui::Begin("Settings");
 	ImGui::DragFloat3("Global Light Color", 
-		&m_scene->GetLight().color[0], 0.1, 0, 1);
+		&m_scene->GetLight().color[0], 0.05, 0, 1);
 	ImGui::DragFloat3("Global Light Direction",
-		&m_scene->GetLight().direction[0], 0.1, -1, 1);
+		&m_scene->GetLight().direction[0], 0.05, -1, 1);
 	if (ImGui::CollapsingHeader("Camera Settings"))
 	{
 		if (ImGui::Button("StationaryCamera"))
@@ -241,7 +241,7 @@ void GraphicsApp::ImGUIRefresher()
 		{
 			auto rotSpeed = m_mainCamera->GetRotationSpeed();
 			if (ImGui::DragFloat("Rotation Speed", rotSpeed,
-				0.1f, 0.1f, 40.f))
+				0.1f, 0.1f, 5.f))
 				m_mainCamera->SetRotationSpeed(*rotSpeed);
 			auto flySpeed = m_camera.GetSpeed();
 			if (ImGui::DragFloat("Movement Speed", flySpeed,
