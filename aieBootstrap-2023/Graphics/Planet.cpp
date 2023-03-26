@@ -1,8 +1,9 @@
 #include "Planet.h"
 #include "Gizmos.h"
+#include "imgui.h"
 #include <glm/ext.hpp>
 
-Planet::Planet(glm::mat4 _matrix, float _distFromSun, glm::vec4 _color, float _rotationSpeed, float _radius, bool _hasRing)
+Planet::Planet(glm::mat4 _matrix, float _distFromSun, glm::vec4 _color, float _rotationSpeed, float _radius, const char* planetName, bool _hasRing)
 {
 	m_matrix = _matrix;
 	m_distFromSun = _distFromSun;
@@ -10,6 +11,7 @@ Planet::Planet(glm::mat4 _matrix, float _distFromSun, glm::vec4 _color, float _r
 	m_rotationSpeed = _rotationSpeed;
 	m_radius = _radius;
 	m_hasRing = _hasRing;
+	m_planetName = planetName;
 }
 
 Planet::~Planet()
@@ -18,6 +20,12 @@ Planet::~Planet()
 
 void Planet::Update(float _deltaTime)
 {
+	for (auto planet : m_childrenPlanets)
+		planet->Update(_deltaTime);
+
+	if (!planetOn)
+		return;
+
 	m_rotation += m_rotationSpeed * _deltaTime;
 
 	if (m_parentPlanet)
@@ -25,10 +33,17 @@ void Planet::Update(float _deltaTime)
 			glm::vec3(sin(m_rotation) * m_distFromSun, m_axis * sin(m_rotation) * m_distFromSun, cos(m_rotation) * m_distFromSun))[3];
 
 	m_matrix = glm::rotate(m_matrix, _deltaTime * 1.6f, glm::vec3(0, 1, 0));
+
+	ImGui();
 }
 
 void Planet::Draw()
 {
+	for (auto planet : m_childrenPlanets)
+		planet->Draw();
+
+	if (!planetOn)
+		return;
 	aie::Gizmos::addSphere(GetPosition(), m_radius, 8, 8, m_color, &m_matrix);
 	if (m_hasRing)
 		aie::Gizmos::addRing(GetPosition(), m_radius + 0.1f, m_radius + 0.2f, 8, m_color, &m_matrix);
@@ -37,4 +52,41 @@ void Planet::Draw()
 glm::vec3 Planet::GetPosition()
 {
 	return glm::vec3(m_matrix[3][0], m_matrix[3][1], m_matrix[3][2]);
+}
+
+void Planet::AddChild(Planet* _planet)
+{
+	Planet* parent = _planet->GetParentPlanet();
+	if (parent != this && parent != nullptr)
+	{
+		// Remove itself as child from original parent
+		parent->m_childrenPlanets.erase(std::remove(parent->m_childrenPlanets.begin(),
+			m_childrenPlanets.end(), _planet), m_childrenPlanets.end());
+	}
+	_planet->SetParentPlanet(this);
+
+}
+
+void Planet::TogglePlanet()
+{
+	planetOn = !planetOn;
+}
+
+void Planet::ImGui()
+{
+	ImGui::Begin(m_planetName);
+	if (ImGui::Button("Turn Off"))
+		planetOn = !planetOn;
+	ImGui::DragFloat("Speed", &m_rotationSpeed, 0.05f);
+	ImGui::DragFloat3("Color", &m_color[0], 0.05f, 0.f, 1.f);
+
+	for (auto planet : m_childrenPlanets)
+	{
+		if (ImGui::Button(planet->GetName()))
+		{
+			planet->TogglePlanet();
+		}
+	}
+
+	ImGui::End();
 }

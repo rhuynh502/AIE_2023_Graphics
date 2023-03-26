@@ -44,8 +44,8 @@ bool GraphicsApp::startup() {
 	m_scene = new Scene(m_mainCamera, glm::vec2(getWindowWidth(), getWindowHeight()),
 		light, m_ambientLight);
 
-	m_scene->AddPointLights(glm::vec3(5, 3, 0), glm::vec3(1, 0, 0), 30);
-	m_scene->AddPointLights(glm::vec3(-5, 3, 0), glm::vec3(0, 0, 1), 30);
+	m_scene->AddPointLights(glm::vec3(3, 2, -1), glm::vec3(1, 0, 0), 30);
+	m_scene->AddPointLights(glm::vec3(3, 2, 1), glm::vec3(0, 0, 1), 30);
 
 	return LaunchShaders();
 }
@@ -78,9 +78,7 @@ void GraphicsApp::update(float deltaTime) {
 	// add a transform so that we can see the axis
 	Gizmos::addTransform(mat4(1));
 
-	if(m_planetsOn)
-		for (auto planet : m_planets)
-			planet->Update(deltaTime);
+	m_sun->Update(deltaTime);
 
 	// quit if we press escape
 	aie::Input* input = aie::Input::getInstance();
@@ -130,9 +128,7 @@ void GraphicsApp::draw() {
 	if(m_pyramidOn)
 		PyramidDraw(pv * m_pyramidTransform);
 
-	if(m_planetsOn)
-		for(auto planet : m_planets)
-			planet->Draw();
+	m_sun->Draw();
 
 	//OBJDraw(pvm, m_robotTransform, &m_robotMesh);
 
@@ -142,48 +138,38 @@ void GraphicsApp::draw() {
 void GraphicsApp::InitialisePlanets()
 {
 	// initialise planets
-	m_sun = new Planet(mat4(1), 0, vec4(1, 0, 0, 1), 0, 0.1f);
+	m_sun = new Planet(mat4(1), 0, vec4(1, 0, 0, 1), 0, 0.1f, "Sun");
 	m_sun->SetMatrix(glm::translate(m_sun->GetMatrix(), vec3(0, 1, 0)));
-	m_planets.push_back(m_sun);
 
-	Planet* m_mercury = new Planet(glm::translate(m_sun->GetMatrix(), vec3(1.2f, 0, 0)), 1.2f, vec4(0.5f, 0.5f, 0, 1), 1.2f, 0.2f);
-	m_mercury->SetParentPlanet(m_sun);
-	m_mercury->SetAxis(-1);
-	m_planets.push_back(m_mercury);
+	Planet* mercury = new Planet(glm::translate(m_sun->GetMatrix(), vec3(1.2f, 0, 0)), 1.2f, vec4(0.5f, 0.5f, 0, 1), 1.2f, 0.2f, "Mercury");
+	m_sun->AddChild(mercury);
+	mercury->SetAxis(-1);
 
-	Planet* m_venus = new Planet(glm::translate(m_sun->GetMatrix(), vec3(1.6f, 0, 0)), 1.6f, vec4(1, 0.647f, 0, 1), 0.8f, 0.2f);
-	m_venus->SetParentPlanet(m_sun);
-	m_venus->SetAxis(-1.2f);
-	m_planets.push_back(m_venus);
+	Planet* venus = new Planet(glm::translate(m_sun->GetMatrix(), vec3(1.6f, 0, 0)), 1.6f, vec4(1, 0.647f, 0, 1), 0.8f, 0.2f, "Venus");
+	m_sun->AddChild(venus);
 
-	Planet* m_earth = new Planet(glm::translate(m_sun->GetMatrix(), vec3(2.f, 0, 0)), 2.f, vec4(0.2f, 0.2f, 1, 1), 0.6f, 0.2f);
-	m_earth->SetParentPlanet(m_sun);
-	m_planets.push_back(m_earth);
+	Planet* earth = new Planet(glm::translate(m_sun->GetMatrix(), vec3(2.f, 0, 0)), 2.f, vec4(0.2f, 0.2f, 1, 1), 0.6f, 0.2f, "Earth");
+	earth->SetParentPlanet(m_sun);
 
-	Planet* m_mars = new Planet(glm::translate(m_sun->GetMatrix(), vec3(2.4f, 0, 0)), 2.4f, vec4(1, 0.7f, 0, 1), 0.7f, 0.2f);
-	m_mars->SetParentPlanet(m_sun);
-	m_mars->SetAxis(-0.64f);
-	m_planets.push_back(m_mars);
+	Planet* mars = new Planet(glm::translate(m_sun->GetMatrix(), vec3(2.4f, 0, 0)), 2.4f, vec4(1, 0.7f, 0, 1), 0.7f, 0.2f, "Mars");
+	mars->SetParentPlanet(m_sun);
+	mars->SetAxis(-0.64f);
 
-	Planet* m_jupiter = new Planet(glm::translate(m_sun->GetMatrix(), vec3(2.8f, 0, 0)), 2.8f, vec4(1, 0.87f, 0, 1), 0.45f, 0.2f, true);
-	m_jupiter->SetParentPlanet(m_sun);
-	m_jupiter->SetAxis(0.77f);
-	m_planets.push_back(m_jupiter);
+	Planet* jupiter = new Planet(glm::translate(m_sun->GetMatrix(), vec3(2.8f, 0, 0)), 2.8f, vec4(1, 0.87f, 0, 1), 0.45f, 0.2f, "Jupiter", true);
+	jupiter->SetParentPlanet(m_sun);
+	jupiter->SetAxis(0.77f);
 
-	Planet* m_saturn = new Planet(glm::translate(m_sun->GetMatrix(), vec3(3.2f, 0, 0)), 3.2f, vec4(1, 1, 1, 1), 0.4f, 0.2f, true);
-	m_saturn->SetParentPlanet(m_sun);
-	m_saturn->SetAxis(-0.2f);
-	m_planets.push_back(m_saturn);
+	Planet* saturn = new Planet(glm::translate(m_sun->GetMatrix(), vec3(3.2f, 0, 0)), 3.2f, vec4(1, 1, 1, 1), 0.4f, 0.2f, "Saturn", true);
+	saturn->SetParentPlanet(m_sun);
+	saturn->SetAxis(-0.2f);
 
-	Planet* m_uranus = new Planet(glm::translate(m_sun->GetMatrix(), vec3(3.6f, 0, 0)), 3.6f, vec4(0, 0, 1, 1), 0.2f, 0.2f);
-	m_uranus->SetParentPlanet(m_sun);
-	m_uranus->SetAxis(0.466f);
-	m_planets.push_back(m_uranus);
+	Planet* uranus = new Planet(glm::translate(m_sun->GetMatrix(), vec3(3.6f, 0, 0)), 3.6f, vec4(0, 0, 1, 1), 0.2f, 0.2f, "Uranus");
+	uranus->SetParentPlanet(m_sun);
+	uranus->SetAxis(0.466f);
 
-	Planet* m_moon = new Planet(glm::translate(m_earth->GetMatrix(), vec3(0.2f, 0, 0)), 0.2f, vec4(1, 1, 1, 1), 1.5f, 0.05f);
-	m_moon->SetParentPlanet(m_earth);
-	m_moon->SetAxis(0.6f);
-	m_planets.push_back(m_moon);
+	Planet* moon = new Planet(glm::translate(earth->GetMatrix(), vec3(0.2f, 0, 0)), 0.2f, vec4(1, 1, 1, 1), 1.5f, 0.05f, "Earth Moon");
+	earth->AddChild(moon);
+	moon->SetAxis(0.6f);
 }
 
 bool GraphicsApp::LaunchShaders()
@@ -268,8 +254,11 @@ void GraphicsApp::ImGUIRefresher()
 
 	if (ImGui::CollapsingHeader("Planets Settings"))
 	{
-		if(ImGui::Button(m_planetsOn ? "DEACTIVATE BUNNY POWERS" : "ACTIVATE BUNNY POWERS"))
-			m_planetsOn = !m_planetsOn;
+		if (ImGui::Button(m_sun->GetName()))
+		{
+			m_sun->TogglePlanet();
+		}
+		
 		if(ImGui::Button(m_bunnyOn ? "DEACTIVATE BUNNY" : "ACTIVATE BUNNY"))
 			m_bunnyOn = !m_bunnyOn;
 	}

@@ -1,25 +1,38 @@
 #pragma once
 #include <glm/mat4x4.hpp>
+#include <vector>
 
 class Planet
 {
 public:
-	Planet(glm::mat4 _matrix, float _distFromSun, glm::vec4 _color, float _rotationSpeed, float _radius, bool _hasRing = false);
+	Planet(glm::mat4 _matrix, float _distFromSun, glm::vec4 _color, float _rotationSpeed, float _radius, const char* planetName, bool _hasRing = false);
 	~Planet();
 
 	void Update(float _deltaTime);
 	void Draw();
 
+	void ImGui();
+
 	// getters
 	glm::vec3 GetPosition();
 	glm::mat4 GetMatrix() { return m_matrix; }
 	float GetDistFromSun() { return m_distFromSun; }
+	Planet* GetParentPlanet() { return m_parentPlanet; }
+	const char* GetName() { return m_planetName; }
 
 	// setters
 	void SetMatrix(glm::mat4 _matrix) { m_matrix = _matrix; }
-	void SetParentPlanet(Planet* _planet) { m_parentPlanet = _planet; }
+	void SetParentPlanet(Planet* _planet) 
+	{ 
+		m_parentPlanet = _planet;
+		_planet->m_childrenPlanets.push_back(this);
+	}
 	void SetAxis(float _axis) { m_axis = _axis; }
+	void AddChild(Planet* _planet);
 
+	void TogglePlanet();
+
+	bool planetOn = false;
 
 protected:
 	glm::mat4 m_matrix;
@@ -27,9 +40,11 @@ protected:
 	float m_rotationSpeed;
 	float m_radius;
 	Planet* m_parentPlanet = nullptr;
+	std::vector<Planet*> m_childrenPlanets;
 	glm::vec4 m_color;
 	bool m_hasRing;
 	float m_axis = 0;
 	float m_rotation = 0;
+	const char* m_planetName;
 };
 

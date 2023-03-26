@@ -90,7 +90,7 @@ void main()
     }
 
     // Calculate the propeorties of each color type
-    vec3 ambient = AmbientColor * Ka * texDiffuse;
+    vec3 ambient = AmbientColor * Ka * texNormal;
     vec3 diffuse = diffuseTotal * Kd * texDiffuse;
     vec3 specular = specularTotal * Ks * texSpecular;
 
