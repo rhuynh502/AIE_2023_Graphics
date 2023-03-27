@@ -22,6 +22,12 @@ struct Light
 		color = colour * intensity;
 	}
 	~Light() {};
+
+	void Draw()
+	{
+		//aie::Gizmos::addSphere(direction, 0.5f, 7, 7, glm::vec4(color, 0));
+	}
+
 	glm::vec3 direction;
 	glm::vec3 color;
 };

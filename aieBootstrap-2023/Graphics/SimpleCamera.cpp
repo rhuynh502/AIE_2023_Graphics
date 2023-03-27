@@ -23,7 +23,7 @@ void SimpleCamera::Draw()
 		return;
 
 	float thetaR = glm::radians(m_theta);
-	float phiR = glm::radians(-m_phi + 90);
+	float phiR = glm::radians(m_phi + 90);
 
 	glm::vec3 forward(glm::cos(phiR) * glm::cos(thetaR), glm::sin(phiR),
 		glm::cos(phiR) * glm::sin(thetaR));

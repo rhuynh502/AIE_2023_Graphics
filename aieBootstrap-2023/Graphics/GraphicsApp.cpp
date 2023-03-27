@@ -123,15 +123,12 @@ void GraphicsApp::draw()
 	m_scene->Draw();
 
 	// Unbind the target to return to the backbuffer
-	m_renderTarget.unbind();
-
-	clearScreen();
 
 	if(m_cubeOn)
 		CubeDraw(pv * m_cubeTransform);
 
-	if(m_quadOn)
-		QuadTexturedDraw(pv * m_quadTransform);
+	/*if(m_quadOn)
+		QuadTexturedDraw(pv * m_quadTransform);*/
 
 	if (m_bunnyOn)
 	{
@@ -147,11 +144,22 @@ void GraphicsApp::draw()
 
 	m_sun->Draw();
 
-	m_scene->Draw();
+	Gizmos::draw(m_projectionMatrix * m_viewMatrix);
+
+	m_renderTarget.unbind();
+
+	clearScreen();
+
 
 	//OBJDraw(pv, m_robotTransform, &m_robotMesh);
+	// Bind the post processing shader and the texture
+	m_postProcessShader.bind();
+	m_postProcessShader.bindUniform("colorTarget", 0);
+	m_postProcessShader.bindUniform("postProcessTarget", m_postProcessEffect);
+	m_renderTarget.getTarget(0).bind(0);
 
-	Gizmos::draw(m_projectionMatrix * m_viewMatrix);
+	m_fullScreenQuad.Draw();
+
 }
 
 void GraphicsApp::InitialisePlanets()
@@ -211,6 +219,21 @@ bool GraphicsApp::LaunchShaders()
 		return false;
 	}
 
+	// Post Processing Shader
+	m_postProcessShader.loadShader(aie::eShaderStage::VERTEX,
+		"./shaders/post.vert");
+	m_postProcessShader.loadShader(aie::eShaderStage::FRAGMENT,
+		"./shaders/post.frag");
+
+	if (!m_postProcessShader.link())
+	{
+		printf("Post Processing Shader has an Error: %s\n",
+			m_postProcessShader.getLastError());
+		return false;
+	}
+#pragma endregion 
+
+#pragma region Loader
 	// Used to load cube
 	if (!CubeLoader())
 		return false;
@@ -235,10 +258,12 @@ bool GraphicsApp::LaunchShaders()
 	if (!RobotLoader())
 		return false;
 
+	// Create a full screen quad
+	m_fullScreenQuad.InitialiseFullScreenQuad();
+#pragma endregion
 	for(int i = 0; i < 6; i++)
 		m_scene->AddInstance(new Instance(glm::vec3(-42 + (i * 14), 0, 0), glm::vec3(0, i * 30, 0),
 			glm::vec3(1, 1, 1), &m_robotMesh, &m_normallitShader, "Robot " + std::to_string(i)));
-#pragma endregion 
 	return true;
 }
 
@@ -254,25 +279,23 @@ void GraphicsApp::ImGUIRefresher()
 		if (ImGui::Button("StationaryCamera"))
 		{
 			m_mainCamera = &m_stationaryCamera;
-			m_mainCamera->ToggleCamera();
 			m_scene->SetCamera(m_mainCamera);
 			m_mainCamera->ToggleCamera();
 		}
 		if (ImGui::Button("StationaryCamera1"))
 		{
 			m_mainCamera = &m_stationaryCamera1;
-			m_mainCamera->ToggleCamera();
 			m_scene->SetCamera(m_mainCamera);
 			m_mainCamera->ToggleCamera();
 		}
 		if (ImGui::Button("FlyCamera"))
 		{
 			m_mainCamera = &m_camera;
-			m_mainCamera->ToggleCamera();
 			m_scene->SetCamera(m_mainCamera);
 			m_mainCamera->ToggleCamera();
 		}
 		m_mainCamera->ImGui();
+		ImGui::SliderInt("Post Processing Effect", &m_postProcessEffect, -1, 11);
 	}
 
 	if (ImGui::CollapsingHeader("Planets Settings"))
