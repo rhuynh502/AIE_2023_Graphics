@@ -8,6 +8,7 @@ public:
 	~SimpleCamera() {};
 
 	virtual void Update(float deltaTime);
+	void Draw();
 	glm::vec3 GetPosition() { return m_position; }
 	glm::mat4 GetViewMatrix();
 	glm::mat4 GetProjectionMatrix(float width, float height);
@@ -22,6 +23,11 @@ public:
 	void SetProjectionMatrix(float fieldOfView, float aspectRatio, float near, float far);
 	void SetProjectionMatrix(float fieldOfView, float width, float height, float near, float far);
 	void SetRotationSpeed(float rotationSpeed) { m_rotationSpeed = rotationSpeed; }
+
+	void ToggleCamera() { isMainCamera = !isMainCamera; }
+	virtual void ImGui();
+
+	bool isMainCamera = false;
 
 protected:
 	glm::mat4 m_projectionViewTransform;

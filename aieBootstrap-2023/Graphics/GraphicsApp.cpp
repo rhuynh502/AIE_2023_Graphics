@@ -34,8 +34,10 @@ bool GraphicsApp::startup() {
 
 	InitialisePlanets();
 
-	m_stationaryCamera.SetPosition(glm::vec3(10, 5, 0));
+	m_stationaryCamera.SetPosition(glm::vec3(10, 3, 0));
 	m_stationaryCamera.SetRotation(glm::vec3(180, 0, 0));
+	m_stationaryCamera1.SetPosition(glm::vec3(-10, 3, 0));
+	m_stationaryCamera1.SetRotation(glm::vec3(0, 0, 0));
 
 	Light light;
 	light.color = { 1, 1, 1 };
@@ -43,9 +45,14 @@ bool GraphicsApp::startup() {
 
 	m_scene = new Scene(m_mainCamera, glm::vec2(getWindowWidth(), getWindowHeight()),
 		light, m_ambientLight);
+	m_mainCamera->isMainCamera = true;
 
 	m_scene->AddPointLights(glm::vec3(-3, 2, 0), glm::vec3(1, 0, 0), 30);
 	m_scene->AddPointLights(glm::vec3(3, 2, 0), glm::vec3(0, 0, 1), 30);
+
+	m_cameras.push_back(m_camera);
+	m_cameras.push_back(m_stationaryCamera);
+	m_cameras.push_back(m_stationaryCamera1);
 
 	return LaunchShaders();
 }
@@ -87,7 +94,6 @@ void GraphicsApp::update(float deltaTime) {
 	m_scene->GetLight().direction = glm::normalize(glm::vec3(glm::cos(time * 2), glm::sin(time * 2), 0));
 
 	m_mainCamera->Update(deltaTime);
-	//m_stationaryCamera.Update(deltaTime);
 
 	if (input->isKeyDown(aie::INPUT_KEY_ESCAPE))
 		quit();
@@ -95,11 +101,17 @@ void GraphicsApp::update(float deltaTime) {
 	ImGUIRefresher();
 }
 
-void GraphicsApp::draw() {
+void GraphicsApp::draw()
+{
+	// Bind the render target as the
+	// first part of the draw function
+	m_renderTarget.bind();
 
 	// wipe the screen to the background colour
 	clearScreen();
 
+	for (auto camera : m_cameras)
+		camera.Draw();
 	// update perspective based on screen size
 	// create simple camera transforms
 	m_viewMatrix = m_mainCamera->GetViewMatrix();
@@ -109,6 +121,11 @@ void GraphicsApp::draw() {
 	auto pv = m_projectionMatrix * m_viewMatrix;
 
 	m_scene->Draw();
+
+	// Unbind the target to return to the backbuffer
+	m_renderTarget.unbind();
+
+	clearScreen();
 
 	if(m_cubeOn)
 		CubeDraw(pv * m_cubeTransform);
@@ -129,6 +146,7 @@ void GraphicsApp::draw() {
 		PyramidDraw(pv * m_pyramidTransform);
 
 	m_sun->Draw();
+
 
 	//OBJDraw(pv, m_robotTransform, &m_robotMesh);
 
@@ -174,6 +192,13 @@ void GraphicsApp::InitialisePlanets()
 
 bool GraphicsApp::LaunchShaders()
 {
+	if (!m_renderTarget.initialise(1, getWindowWidth(), getWindowHeight()))
+	{
+		printf("Render target error!\n");
+		return false;
+	}
+
+#pragma region LoadingShaders
 	m_normallitShader.loadShader(aie::eShaderStage::VERTEX,
 		"./shaders/normallit.vert");
 	m_normallitShader.loadShader(aie::eShaderStage::FRAGMENT,
@@ -210,9 +235,9 @@ bool GraphicsApp::LaunchShaders()
 		return false;
 
 	for(int i = 0; i < 6; i++)
-		m_scene->AddInstance(new Instance(glm::vec3(-21 + (i * 7), 0, 0), glm::vec3(0, i * 30, 0),
-			glm::vec3(1, 1, 1), &m_robotMesh, &m_normallitShader));
-
+		m_scene->AddInstance(new Instance(glm::vec3(-42 + (i * 14), 0, 0), glm::vec3(0, i * 30, 0),
+			glm::vec3(1, 1, 1), &m_robotMesh, &m_normallitShader, "Robot " + std::to_string(i)));
+#pragma endregion 
 	return true;
 }
 
@@ -228,36 +253,30 @@ void GraphicsApp::ImGUIRefresher()
 		if (ImGui::Button("StationaryCamera"))
 		{
 			m_mainCamera = &m_stationaryCamera;
+			m_mainCamera->ToggleCamera();
 			m_scene->SetCamera(m_mainCamera);
-			m_inFlyCam = false;
+			m_mainCamera->ToggleCamera();
+		}
+		if (ImGui::Button("StationaryCamera1"))
+		{
+			m_mainCamera = &m_stationaryCamera1;
+			m_mainCamera->ToggleCamera();
+			m_scene->SetCamera(m_mainCamera);
+			m_mainCamera->ToggleCamera();
 		}
 		if (ImGui::Button("FlyCamera"))
 		{
 			m_mainCamera = &m_camera;
+			m_mainCamera->ToggleCamera();
 			m_scene->SetCamera(m_mainCamera);
-			m_inFlyCam = true;
+			m_mainCamera->ToggleCamera();
 		}
-		if (m_inFlyCam)
-		{
-			auto rotSpeed = m_mainCamera->GetRotationSpeed();
-			if (ImGui::DragFloat("Rotation Speed", rotSpeed,
-				0.1f, 0.1f, 5.f))
-				m_mainCamera->SetRotationSpeed(*rotSpeed);
-			auto flySpeed = m_camera.GetSpeed();
-			if (ImGui::DragFloat("Movement Speed", flySpeed,
-				0.1f, 0.1f, 5.f))
-			{
-				m_camera.SetSpeed(*flySpeed);
-			}
-		}
+		m_mainCamera->ImGui();
 	}
 
 	if (ImGui::CollapsingHeader("Planets Settings"))
 	{
-		if (ImGui::Button(m_sun->GetName()))
-		{
-			m_sun->TogglePlanet();
-		}
+		ImGui::Checkbox(m_sun->GetName(), &m_sun->planetOn);
 		
 		if(ImGui::Button(m_bunnyOn ? "DEACTIVATE BUNNY" : "ACTIVATE BUNNY"))
 			m_bunnyOn = !m_bunnyOn;
@@ -283,6 +302,8 @@ void GraphicsApp::ImGUIRefresher()
 				&m_pyramidTransform[3][0]);
 	}
 	ImGui::End();
+
+	m_scene->ImGui();
 }
 
 bool GraphicsApp::QuadLoader()
@@ -517,7 +538,7 @@ void GraphicsApp::OBJDraw(glm::mat4 pvm, glm::mat4 transform, aie::OBJMesh* objM
 
 	// Bind the directional light we defined
 	m_normallitShader.bindUniform("LightDirection", m_scene->GetLight().direction);
-	m_normallitShader.bindUniform("AmbientColor", m_ambientLight);
+	m_normallitShader.bindUniform("AmbientColor", m_scene->GetAmbientLightColor());
 	m_normallitShader.bindUniform("LightColor", m_scene->GetLight().color);
 
 	//Bind Texture location
@@ -701,7 +722,9 @@ void GraphicsApp::QuadTexturedDraw(glm::mat4 pvm)
 	m_texturedShader.bindUniform("diffuseTexture", 0);
 
 	// Bind the texture to a specific location
-	m_gridTexture.bind(0);
+	//m_gridTexture.bind(0);
+
+	m_renderTarget.getTarget(0).bind(0);
 
 	// Draw the quad using Mesh's draw
 	m_quadMesh.Draw();
@@ -718,7 +741,7 @@ void GraphicsApp::PhongDraw(glm::mat4 pvm, glm::mat4 transform)
 
 	// Bind the directional light we defined
 	m_phongShader.bindUniform("LightDirection", m_scene->GetLight().direction);
-	m_phongShader.bindUniform("AmbientColor", m_ambientLight);
+	m_phongShader.bindUniform("AmbientColor", m_scene->GetAmbientLightColor());
 	m_phongShader.bindUniform("LightColor", m_scene->GetLight().color);
 
 	// Bind the pvm using the one provided

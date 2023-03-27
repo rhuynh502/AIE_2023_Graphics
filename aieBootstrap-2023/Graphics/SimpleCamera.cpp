@@ -1,6 +1,8 @@
 #include "SimpleCamera.h"
 #include <glm/ext.hpp>
+#include "Gizmos.h"
 #include "Input.h"
+#include "Instance.h"
 
 SimpleCamera::SimpleCamera()
 {
@@ -13,6 +15,21 @@ SimpleCamera::SimpleCamera()
 void SimpleCamera::Update(float deltaTime)
 {
 	
+}
+
+void SimpleCamera::Draw()
+{
+	if (isMainCamera)
+		return;
+
+	float thetaR = glm::radians(m_theta);
+	float phiR = glm::radians(-m_phi + 90);
+
+	glm::vec3 forward(glm::cos(phiR) * glm::cos(thetaR), glm::sin(phiR),
+		glm::cos(phiR) * glm::sin(thetaR));
+
+	aie::Gizmos::addCylinderFilled(m_position, 0.5f, 0.5f, 10, 
+		glm::vec4(1, 1, 1, 0));
 }
 
 glm::mat4 SimpleCamera::GetViewMatrix()
@@ -61,4 +78,8 @@ void SimpleCamera::SetProjectionMatrix(float fieldOfView, float width, float hei
 {
 	m_projectionViewTransform = glm::perspective(glm::pi<float>() * 0.25f, width / height,
 		0.1f, 1000.f);
+}
+
+void SimpleCamera::ImGui()
+{
 }

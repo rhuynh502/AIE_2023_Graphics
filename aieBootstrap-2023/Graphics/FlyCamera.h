@@ -5,6 +5,8 @@ class FlyCamera : public SimpleCamera
 {
 public:
 	void Update(float deltaTime);
+	void ImGui();
+
 	void SetSpeed(float speed) { m_speed = speed; }
 	float* GetSpeed() { return &m_speed; }
 protected:

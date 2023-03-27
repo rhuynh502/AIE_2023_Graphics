@@ -7,21 +7,24 @@
 #include "GraphicsApp.h"
 
 Instance::Instance(glm::mat4 transform, aie::OBJMesh* mesh,
-	aie::ShaderProgram* shader) :
-	m_transform(transform), m_mesh(mesh), m_shader(shader)
+	aie::ShaderProgram* shader, std::string instanceName) :
+	m_transform(transform), m_mesh(mesh), m_shader(shader), m_instanceName(instanceName)
 {
 
 }
 
 Instance::Instance(glm::vec3 position, glm::vec3 eulerAngles, glm::vec3 scale,
-	aie::OBJMesh* mesh, aie::ShaderProgram* shader) :
-	m_mesh(mesh), m_shader(shader)
+	aie::OBJMesh* mesh, aie::ShaderProgram* shader, std::string instanceName) :
+	m_mesh(mesh), m_shader(shader), m_instanceName(instanceName)
 {
 	m_transform = MakeTransform(position, eulerAngles, scale);
 }
 
 void Instance::Draw(Scene* scene)
 {
+	if (!instanceOn)
+		return;
+
 	// Set the shader pipeline
 	m_shader->bind();
 

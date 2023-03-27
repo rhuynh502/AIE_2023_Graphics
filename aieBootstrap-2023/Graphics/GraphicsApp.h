@@ -11,6 +11,7 @@
 #include "Scene.h"
 #include "Instance.h"
 #include "FlyCamera.h"
+#include "RenderTarget.h"
 
 #include <vector>
 
@@ -75,6 +76,8 @@ protected:
 	aie::ShaderProgram m_texturedShader;
 	aie::ShaderProgram m_normallitShader;
 
+	aie::RenderTarget m_renderTarget;
+
 	Mesh m_quadMesh;
 	glm::mat4 m_quadTransform;
 
@@ -99,6 +102,7 @@ protected:
 	SimpleCamera* m_mainCamera;
 	FlyCamera m_camera;
 	StationaryCamera m_stationaryCamera;
+	StationaryCamera m_stationaryCamera1;
 
 	//struct Light {
 	//	glm::vec3 direction;
@@ -108,6 +112,7 @@ protected:
 	glm::vec3 m_ambientLight;
 
 	std::vector<Planet*> m_planets;
+	std::vector<SimpleCamera> m_cameras;
 	Planet* m_sun;
 	bool m_planetsOn = false;
 	bool m_cubeOn = false;

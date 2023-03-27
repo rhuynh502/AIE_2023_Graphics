@@ -2,8 +2,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <list>
+#include "SimpleCamera.h"
 
-class SimpleCamera;
 class Instance;
 
 const int MAX_LIGHTS = 4;
@@ -36,6 +36,7 @@ public:
 	void AddInstance(Instance* instance);
 
 	void Draw();
+	void ImGui();
 	void AddPointLights(Light light) { m_pointLights.push_back(light); }
 	void AddPointLights(glm::vec3 direction, glm::vec3 color, float intensity)
 	{
@@ -47,7 +48,7 @@ public:
 	//glm::vec2 GetWindowSize();
 	glm::vec2 GetWindowSize() { return m_windowSize; }
 	glm::vec3 GetAmbientLightColor() { return m_ambientLightColor; }
-	Light GetLight() { return m_light; }
+	Light& GetLight() { return m_light; }
 	std::list<Instance*> GetInstances() { return m_instances; }
 	std::vector<Light>& GetPointLights() { return m_pointLights; }
 	int GetNumberOfLights() { return m_pointLights.size(); }

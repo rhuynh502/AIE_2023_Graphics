@@ -1,5 +1,6 @@
 #include "FlyCamera.h"
 #include "Input.h"
+#include "imgui.h"
 
 void FlyCamera::Update(float deltaTime)
 {
@@ -40,3 +41,14 @@ void FlyCamera::Update(float deltaTime)
 
 	m_lastMouse = glm::vec2(mx, my);
 }
+
+void FlyCamera::ImGui()
+{
+	ImGui::DragFloat("Rotation Speed", &m_rotationSpeed,
+		0.1f, 0.1f, 5.f);
+
+	ImGui::DragFloat("Movement Speed", &m_speed,
+		0.1f, 0.1f, 5.f);
+
+}
+

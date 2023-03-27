@@ -84,10 +84,7 @@ void Planet::ImGui()
 	{
 		for (auto planet : m_childrenPlanets)
 		{
-			if (ImGui::Button(planet->GetName()))
-			{
-				planet->TogglePlanet();
-			}
+			ImGui::Checkbox(planet->GetName(), &planet->planetOn);
 		}
 	}
 
