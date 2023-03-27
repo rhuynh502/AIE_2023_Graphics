@@ -147,6 +147,7 @@ void GraphicsApp::draw()
 
 	m_sun->Draw();
 
+	m_scene->Draw();
 
 	//OBJDraw(pv, m_robotTransform, &m_robotMesh);
 
