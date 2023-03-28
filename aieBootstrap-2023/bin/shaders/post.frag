@@ -5,6 +5,13 @@ in vec2 vTexCoord;
 
 uniform sampler2D colorTarget;
 uniform int postProcessTarget;
+uniform int windowWidth;
+uniform int windowHeight;
+uniform float posterNumColors;
+uniform float posterGamma;
+uniform int pixels;
+uniform float pixelWidth;
+uniform float pixelHeight;
 
 out vec4 FragColor;
 
@@ -42,9 +49,130 @@ vec4 Distort(vec2 texCoord)
     return texture(colorTarget, newCoord);
 }
 
+vec4 EdgeDetection(vec2 texCoord)
+{
+    float w = 1.0f / windowWidth;
+    float h = 1.0f / windowHeight;
+
+    vec4 k[9];
+    k[0] = texture(colorTarget, texCoord + vec2(-w, -h)); 
+    k[1] = texture(colorTarget, texCoord + vec2(0, -h)); 
+    k[2] = texture(colorTarget, texCoord + vec2(w, -h)); 
+
+    k[3] = texture(colorTarget, texCoord + vec2(-w, 0)); 
+    k[4] = texture(colorTarget, texCoord); 
+    k[5] = texture(colorTarget, texCoord + vec2(w, 0)); 
+
+    k[6] = texture(colorTarget, texCoord + vec2(-w, h)); 
+    k[7] = texture(colorTarget, texCoord + vec2(0, h)); 
+    k[8] = texture(colorTarget, texCoord + vec2(w, h)); 
+
+    vec4 sobelEdgeH = k[2] + (2.0f * k[5]) + k[8] - (k[0] + (2.0f * k[3]) + k[6]);
+    vec4 sobelEdgev = k[0] + (2.0f * k[1]) + k[2] - (k[6] + (2.0f * k[7]) + k[8]);
+
+    vec4 sobel = sqrt((sobelEdgeH * sobelEdgeH) + (sobelEdgev * sobelEdgev));
+
+    return vec4(1.0f - sobel.rgb, 1.0f);
+    
+}
+
+vec4 Sepia(vec2 texCoord)
+{
+    float rr = .393;
+    float rg = .769;
+    float rb = .189;
+    
+    float gr = .349;
+    float gg = .686;
+    float gb = .168;
+    
+    float br = .272;
+    float bg = .534;
+    float bb = .131;
+
+    vec4 color = texture(colorTarget, texCoord);
+    float r = (color.r * rr + color.g * rg + color.b * rb);
+    float g = (color.r * gr + color.g * gg + color.b * gb);
+    float b = (color.r * br + color.g * bg + color.b * bb);
+
+    return vec4(r, g, b, 1.0);
+
+}
+
+vec4 GrayScale(vec2 texCoord)
+{
+    vec4 color = texture(colorTarget, texCoord);
+    float gray = color.r + color.g + color.b / 3;
+    
+    return vec4(gray, gray, gray, 1.0);
+}
+
+vec4 ScanLines(vec2 texCoord)
+{
+    vec2 uv = texCoord / vec2(windowWidth, windowHeight);
+    vec3 col = texture(colorTarget, uv).rgb;
+
+    float count = windowHeight * 1.3f;
+    vec2 s1 = vec2(sin(uv.y * count), cos(uv.y * count));
+    vec3 scanLines = vec3(s1.x, s1.y, s1.x);
+
+    col += col * scanLines * 0.3f;
+    
+    col += col * sin(110.0) * 0.03;
+
+    return vec4(col, 1);
+}
+
+vec4 Pixelation(vec2 texCoord)
+{
+    float dx = pixelWidth * (1. / pixels);
+    float dy = pixelHeight * (1. / pixels);
+    vec2 coord = vec2(dx * floor(texCoord.x / dx),
+                   dy * floor(texCoord.y / dy));
+    return texture(colorTarget, coord);
+}
+
+vec4 Posterization(vec2 texCoord)
+{
+    vec3 post = texture(colorTarget, texCoord).rgb;
+    post = pow(post, vec3(posterGamma));
+    post = post * posterNumColors;
+    post = floor(post);
+    post = post / posterNumColors;
+    post = pow(post, vec3(1.0 / posterGamma));
+
+    return vec4(post, 1.0);
+}
+
 vec4 Flip(vec2 texCoord)
 {
-    return vec4(1.0f + texture(colorTarget, texCoord).rgb, 1.0f);
+    float w = 1.0f / windowWidth;
+    float h = 1.0f / windowHeight;
+
+    float kernel[9] = float[] (
+        5, -3, -3,
+        5, 0, -3,
+        5, -3, -3
+    );
+
+    
+    vec4 sum = vec4(0);
+
+    sum += texture(colorTarget, texCoord + vec2(-w, -h)) * kernel[0]; 
+    sum += texture(colorTarget, texCoord + vec2(0, -h)) * kernel[1]; 
+    sum += texture(colorTarget, texCoord + vec2(w, -h)) * kernel[2]; 
+
+    sum += texture(colorTarget, texCoord + vec2(-w, 0)) * kernel[3]; 
+    sum += texture(colorTarget, texCoord) * kernel[4]; 
+    sum += texture(colorTarget, texCoord + vec2(w, 0)) * kernel[5]; 
+
+    sum += texture(colorTarget, texCoord + vec2(-w, h)) * kernel[6]; 
+    sum += texture(colorTarget, texCoord + vec2(0, h)) * kernel[7]; 
+    sum += texture(colorTarget, texCoord + vec2(w, h)) * kernel[8]; 
+
+    sum.a = 1.0;
+
+    return sum;
 }
 
 void main()
@@ -77,22 +205,22 @@ void main()
         }
         case 2: // Edge Detection
         {
-            FragColor = Default(texCoord);
+            FragColor = EdgeDetection(texCoord);
             break;
         }
         case 3: // Grey Scale
         {
-            FragColor = Default(texCoord);
+            FragColor = GrayScale(texCoord);
             break;
         }
         case 4: // Sepia
         {
-            FragColor = Default(texCoord);
+            FragColor = Sepia(texCoord);
             break;
         }
         case 5: // Scanlines
         {
-            FragColor = Default(texCoord);
+            FragColor = ScanLines(texCoord);
             break;
         }
         case 6: // Invert
@@ -102,12 +230,12 @@ void main()
         }
         case 7: // Pixelizer
         {
-            FragColor = Default(texCoord);
+            FragColor = Pixelation(texCoord);
             break;
         }
         case 8: // Posterization
         {
-            FragColor = Default(texCoord);
+            FragColor = Posterization(texCoord);
             break;
         }
         case 9: // Distance Fog

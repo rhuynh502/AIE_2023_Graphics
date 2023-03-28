@@ -50,7 +50,7 @@ glm::mat4 SimpleCamera::GetProjectionMatrix(float width, float height)
 
 glm::mat4 SimpleCamera::GetWorldTransform(glm::vec3 position, glm::vec3 eulerAngles, glm::vec3 scale)
 {
-	return glm::mat4();
+	return glm::translate(glm::mat4(1), position)* glm::rotate(glm::mat4(1), glm::radians(eulerAngles.z), glm::vec3(0, 0, 1));
 }
 
 void SimpleCamera::SetPosition(glm::vec3 position)

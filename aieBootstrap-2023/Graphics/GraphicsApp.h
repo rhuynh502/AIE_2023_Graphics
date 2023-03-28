@@ -12,6 +12,7 @@
 #include "Instance.h"
 #include "FlyCamera.h"
 #include "RenderTarget.h"
+#include "ParticleEmitter.h"
 
 #include <vector>
 
@@ -63,6 +64,11 @@ protected:
 	void PhongDraw(glm::mat4 pvm, glm::mat4 transform);
 
 	int m_postProcessEffect = -1;
+	float m_posterNumColors = 8;
+	float m_posterGamma = 0.6f;
+	int m_pixels = 512;
+	float m_pixelWidth = 10;
+	float m_pixelHeight = 10;
 
 	Scene* m_scene;
 
@@ -78,6 +84,7 @@ protected:
 	aie::ShaderProgram m_texturedShader;
 	aie::ShaderProgram m_normallitShader;
 	aie::ShaderProgram m_postProcessShader;
+	aie::ShaderProgram m_particleShader;
 
 	aie::RenderTarget m_renderTarget;
 
@@ -114,6 +121,9 @@ protected:
 	//};
 	//Light m_light;
 	glm::vec3 m_ambientLight;
+
+	ParticleEmitter* m_emitter;
+	glm::mat4 m_particleEmitTransform;
 
 	std::vector<Planet*> m_planets;
 	std::vector<SimpleCamera> m_cameras;

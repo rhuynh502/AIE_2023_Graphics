@@ -10,7 +10,7 @@ public:
 	void SetSpeed(float speed) { m_speed = speed; }
 	float* GetSpeed() { return &m_speed; }
 protected:
-	float m_speed = 1;
+	float m_speed = 5;
 	glm::vec3 m_up;
 };
 

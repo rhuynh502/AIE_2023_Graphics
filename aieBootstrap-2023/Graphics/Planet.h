@@ -46,5 +46,6 @@ protected:
 	float m_axis = 0;
 	float m_rotation = 0;
 	const char* m_planetName;
+
 };
 

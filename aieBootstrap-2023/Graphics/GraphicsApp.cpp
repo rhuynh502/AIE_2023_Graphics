@@ -43,6 +43,10 @@ bool GraphicsApp::startup() {
 	light.color = { 1, 1, 1 };
 	light.direction = { 1, -1, 1 };
 
+	m_emitter = new ParticleEmitter();
+	m_emitter->Initialise(1000, 500, .1f, 1.0f, 1, 5, 1, .1f, 
+		glm::vec4(0, 0, 1, 1), glm::vec4(0.3f, 0, 1, 1));
+
 	m_scene = new Scene(m_mainCamera, glm::vec2(getWindowWidth(), getWindowHeight()),
 		light, m_ambientLight);
 	m_mainCamera->isMainCamera = true;
@@ -90,10 +94,13 @@ void GraphicsApp::update(float deltaTime) {
 	// quit if we press escape
 	aie::Input* input = aie::Input::getInstance();
 
+	m_mainCamera->Update(deltaTime);
+
 	// Rotate the light to emulate a 'day/night' cycle
 	m_scene->GetLight().direction = glm::normalize(glm::vec3(glm::cos(time * 2), glm::sin(time * 2), 0));
 
-	m_mainCamera->Update(deltaTime);
+	m_emitter->Update(deltaTime, m_mainCamera->GetWorldTransform(
+		m_mainCamera->GetPosition(), glm::vec3(0), glm::vec3(1)));
 
 	if (input->isKeyDown(aie::INPUT_KEY_ESCAPE))
 		quit();
@@ -120,15 +127,11 @@ void GraphicsApp::draw()
 
 	auto pv = m_projectionMatrix * m_viewMatrix;
 
-	m_scene->Draw();
-
-	// Unbind the target to return to the backbuffer
-
 	if(m_cubeOn)
 		CubeDraw(pv * m_cubeTransform);
 
-	/*if(m_quadOn)
-		QuadTexturedDraw(pv * m_quadTransform);*/
+	if(m_quadOn)
+		QuadTexturedDraw(pv * m_quadTransform);
 
 	if (m_bunnyOn)
 	{
@@ -144,8 +147,15 @@ void GraphicsApp::draw()
 
 	m_sun->Draw();
 
+	m_scene->Draw();
+
+	m_particleShader.bind();
+	m_particleShader.bindUniform("ProjectionViewModel", pv * m_particleEmitTransform);
+	m_emitter->Draw();
+
 	Gizmos::draw(m_projectionMatrix * m_viewMatrix);
 
+	// Unbind the target to return to the backbuffer
 	m_renderTarget.unbind();
 
 	clearScreen();
@@ -156,6 +166,13 @@ void GraphicsApp::draw()
 	m_postProcessShader.bind();
 	m_postProcessShader.bindUniform("colorTarget", 0);
 	m_postProcessShader.bindUniform("postProcessTarget", m_postProcessEffect);
+	m_postProcessShader.bindUniform("windowWidth", (int)getWindowWidth());
+	m_postProcessShader.bindUniform("windowHeight", (int)getWindowHeight());
+	m_postProcessShader.bindUniform("posterNumColors", m_posterNumColors);
+	m_postProcessShader.bindUniform("posterGamma", m_posterGamma);
+	m_postProcessShader.bindUniform("pixels", m_pixels);
+	m_postProcessShader.bindUniform("pixelWidth", m_pixelWidth);
+	m_postProcessShader.bindUniform("pixelHeight", m_pixelHeight);
 	m_renderTarget.getTarget(0).bind(0);
 
 	m_fullScreenQuad.Draw();
@@ -197,6 +214,8 @@ void GraphicsApp::InitialisePlanets()
 	Planet* moon = new Planet(glm::translate(earth->GetMatrix(), vec3(0.2f, 0, 0)), 0.2f, vec4(1, 1, 1, 1), 1.5f, 0.05f, "Earth Moon");
 	earth->AddChild(moon);
 	moon->SetAxis(0.6f);
+
+	m_particleEmitTransform = earth->GetMatrix();
 }
 
 bool GraphicsApp::LaunchShaders()
@@ -231,9 +250,22 @@ bool GraphicsApp::LaunchShaders()
 			m_postProcessShader.getLastError());
 		return false;
 	}
+
+	// Particle Shader
+	m_particleShader.loadShader(aie::eShaderStage::VERTEX,
+		"./shaders/particle.vert");
+	m_particleShader.loadShader(aie::eShaderStage::FRAGMENT,
+		"./shaders/particle.frag");
+
+	if (!m_particleShader.link())
+	{
+		printf("Particle Shader has an Error: %s\n",
+			m_particleShader.getLastError());
+		return false;
+	}
 #pragma endregion 
 
-#pragma region Loader
+#pragma region LoadingMeshes
 	// Used to load cube
 	if (!CubeLoader())
 		return false;
@@ -261,9 +293,12 @@ bool GraphicsApp::LaunchShaders()
 	// Create a full screen quad
 	m_fullScreenQuad.InitialiseFullScreenQuad();
 #pragma endregion
+
+#pragma region LoadingInstances
 	for(int i = 0; i < 6; i++)
 		m_scene->AddInstance(new Instance(glm::vec3(-42 + (i * 14), 0, 0), glm::vec3(0, i * 30, 0),
 			glm::vec3(1, 1, 1), &m_robotMesh, &m_normallitShader, "Robot " + std::to_string(i)));
+#pragma endregion
 	return true;
 }
 
@@ -295,7 +330,22 @@ void GraphicsApp::ImGUIRefresher()
 			m_mainCamera->ToggleCamera();
 		}
 		m_mainCamera->ImGui();
+	}
+
+	if (ImGui::CollapsingHeader("Post Processing"))
+	{
 		ImGui::SliderInt("Post Processing Effect", &m_postProcessEffect, -1, 11);
+		if (m_postProcessEffect == 7)
+		{
+			ImGui::SliderInt("Amount of Pixels", &m_pixels, 32, 2056);
+			ImGui::SliderFloat("Pixel Width", &m_pixelWidth, 0.1f, 25);
+			ImGui::SliderFloat("Pixel Height", &m_pixelHeight, 0.1f, 25);
+		}
+		if (m_postProcessEffect == 8)
+		{
+			ImGui::SliderFloat("Number of Colors", &m_posterNumColors, 3.2f, 20);
+			ImGui::SliderFloat("Gamma", &m_posterGamma, 0.1, 1.5f);
+		}
 	}
 
 	if (ImGui::CollapsingHeader("Planets Settings"))
