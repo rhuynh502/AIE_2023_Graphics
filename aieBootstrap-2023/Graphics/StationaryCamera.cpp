@@ -1,15 +1,26 @@
 #include "StationaryCamera.h"
 #include "glm/ext.hpp"
 #include "imgui.h"
+#include "Gizmos.h"
 
 StationaryCamera::StationaryCamera()
 {
 	m_rotationSpeed = 0;
 }
 
-void StationaryCamera::Update(float deltaTime)
+void StationaryCamera::Draw()
 {
-	
+	if (isMainCamera)
+		return;
+
+	float thetaR = glm::radians(m_theta);
+	float phiR = glm::radians(m_phi + 90);
+
+	glm::vec3 forward(glm::cos(phiR) * glm::cos(thetaR), glm::sin(phiR),
+		glm::cos(phiR) * glm::sin(thetaR));
+
+	aie::Gizmos::addCylinderFilled(m_position, 0.5f, 0.5f, 10,
+		glm::vec4(forward, 0));
 }
 
 void StationaryCamera::ImGui()

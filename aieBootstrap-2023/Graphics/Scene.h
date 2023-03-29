@@ -3,6 +3,7 @@
 #include <vector>
 #include <list>
 #include "SimpleCamera.h"
+#include "Gizmos.h"
 
 class Instance;
 
@@ -25,7 +26,7 @@ struct Light
 
 	void Draw()
 	{
-		//aie::Gizmos::addSphere(direction, 0.5f, 7, 7, glm::vec4(color, 0));
+		aie::Gizmos::addSphere(direction, 0.5f, 7, 7, glm::vec4(color, 0));
 	}
 
 	glm::vec3 direction;

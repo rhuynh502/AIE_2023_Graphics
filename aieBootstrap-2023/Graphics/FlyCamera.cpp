@@ -2,6 +2,13 @@
 #include "Input.h"
 #include "imgui.h"
 
+FlyCamera::FlyCamera()
+{
+	m_position = { 10, 3, 0 };
+	m_phi = 0;
+	m_theta = 180;
+}
+
 void FlyCamera::Update(float deltaTime)
 {
 	aie::Input* input = aie::Input::getInstance();
@@ -42,10 +49,11 @@ void FlyCamera::Update(float deltaTime)
 	m_lastMouse = glm::vec2(mx, my);
 }
 
+
 void FlyCamera::ImGui()
 {
 	ImGui::DragFloat("Rotation Speed", &m_rotationSpeed,
-		0.1f, 0.1f, 5.f);
+		0.1f, 0.1f, 40.f);
 
 	ImGui::DragFloat("Movement Speed", &m_speed,
 		0.1f, 0.1f, 5.f);

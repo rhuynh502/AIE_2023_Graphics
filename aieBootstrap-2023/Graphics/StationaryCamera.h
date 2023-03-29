@@ -5,9 +5,8 @@ class StationaryCamera : public SimpleCamera
 {
 public:
 	StationaryCamera();
-
-	void Update(float deltaTime);
-	void ImGui();
+	void Draw() override;
+	void ImGui() override;
 
 	void SetRotation(glm::vec3 rotation);
 

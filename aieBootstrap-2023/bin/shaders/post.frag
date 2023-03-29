@@ -12,6 +12,9 @@ uniform float posterGamma;
 uniform int pixels;
 uniform float pixelWidth;
 uniform float pixelHeight;
+uniform int scanLineCount;
+uniform float scanLineIntensity;
+uniform float deltaTime;
 
 out vec4 FragColor;
 
@@ -109,18 +112,20 @@ vec4 GrayScale(vec2 texCoord)
 
 vec4 ScanLines(vec2 texCoord)
 {
-    vec2 uv = texCoord / vec2(windowWidth, windowHeight);
-    vec3 col = texture(colorTarget, uv).rgb;
+    //vec2 uv = texCoord / vec2(windowWidth, windowHeight);
+    vec3 col = texture(colorTarget, texCoord).rgb;
 
-    float count = windowHeight * 1.3f;
-    vec2 s1 = vec2(sin(uv.y * count), cos(uv.y * count));
-    vec3 scanLines = vec3(s1.x, s1.y, s1.x);
+    float scanLineYDelta = sin(deltaTime / 200.0);
 
-    col += col * scanLines * 0.3f;
-    
-    col += col * sin(110.0) * 0.03;
+    float scanLine = sin((texCoord.y - scanLineYDelta) * scanLineCount) * scanLineIntensity;
 
-    return vec4(col, 1);
+    col -= scanLine;
+    return vec4(col, 1.0);
+}
+
+vec4 Invert(vec2 texCoord)
+{
+    return vec4(1 - texture(colorTarget, texCoord).rgb, 1.0);
 }
 
 vec4 Pixelation(vec2 texCoord)
@@ -144,7 +149,7 @@ vec4 Posterization(vec2 texCoord)
     return vec4(post, 1.0);
 }
 
-vec4 Flip(vec2 texCoord)
+vec4 Kernel(vec2 texCoord)
 {
     float w = 1.0f / windowWidth;
     float h = 1.0f / windowHeight;
@@ -225,7 +230,7 @@ void main()
         }
         case 6: // Invert
         {
-            FragColor = Default(texCoord);
+            FragColor = Invert(texCoord);
             break;
         }
         case 7: // Pixelizer
@@ -248,9 +253,9 @@ void main()
             FragColor = Default(texCoord);
             break;
         }
-        case 11: // Flip
+        case 11: // Kernel
         {
-            FragColor = Flip(texCoord);
+            FragColor = Kernel(texCoord);
         }
     }
 }

@@ -2,6 +2,7 @@
 #include "Gizmos.h"
 #include "imgui.h"
 #include <glm/ext.hpp>
+#include <string>
 
 Planet::Planet(glm::mat4 _matrix, float _distFromSun, glm::vec4 _color, float _rotationSpeed, float _radius, const char* planetName, bool _hasRing)
 {
@@ -33,7 +34,6 @@ void Planet::Update(float _deltaTime)
 			glm::vec3(sin(m_rotation) * m_distFromSun, m_axis * sin(m_rotation) * m_distFromSun, cos(m_rotation) * m_distFromSun))[3];
 
 	m_matrix = glm::rotate(m_matrix, _deltaTime * 1.6f, glm::vec3(0, 1, 0));
-
 	ImGui();
 }
 
@@ -74,19 +74,29 @@ void Planet::TogglePlanet()
 
 void Planet::ImGui()
 {
-	ImGui::Begin(m_planetName);
-	if (ImGui::Button("Turn Off"))
-		planetOn = !planetOn;
-	ImGui::DragFloat("Speed", &m_rotationSpeed, 0.05f);
-	ImGui::DragFloat3("Color", &m_color[0], 0.05f, 0.f, 1.f);
+	if (!planetOn)
+		return;
 
-	if (ImGui::CollapsingHeader("Children"))
+	ImGui::Columns(2);
+	std::string turnOff = "Turn Off ";
+	if (ImGui::Button((turnOff + m_planetName).c_str()))
+		planetOn = !planetOn;
+
+	std::string name = "Speed";
+	ImGui::DragFloat((m_planetName + name).c_str(),
+		&m_rotationSpeed, 0.05f);
+	std::string color = "Color";
+	ImGui::DragFloat3((m_planetName + color).c_str(),
+		&m_color[0], 0.05f, 0.f, 1.f);
+
+	std::string children = "Children";
+	ImGui::NextColumn();
+	if (m_childrenPlanets.size() > 0 && 
+		ImGui::CollapsingHeader((m_planetName + children).c_str()))
 	{
 		for (auto planet : m_childrenPlanets)
 		{
 			ImGui::Checkbox(planet->GetName(), &planet->planetOn);
 		}
 	}
-
-	ImGui::End();
 }

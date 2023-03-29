@@ -69,6 +69,8 @@ protected:
 	int m_pixels = 512;
 	float m_pixelWidth = 10;
 	float m_pixelHeight = 10;
+	int m_scanLineCount = 250;
+	float m_scanLineIntensity = 0.125f;
 
 	Scene* m_scene;
 

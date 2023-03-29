@@ -4,6 +4,7 @@
 class FlyCamera : public SimpleCamera
 {
 public:
+	FlyCamera();
 	void Update(float deltaTime);
 	void ImGui();
 

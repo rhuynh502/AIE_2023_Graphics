@@ -29,8 +29,9 @@ void Scene::Draw()
 	{
 		m_pointLightPositions[i] = m_pointLights[i].direction;
 		m_pointLightColors[i] = m_pointLights[i].color;
+		m_pointLights[i].Draw();
 	}
-
+	m_light.Draw();
 	for (auto it = m_instances.begin(); it != m_instances.end(); it++)
 	{
 		Instance* instance = *it;

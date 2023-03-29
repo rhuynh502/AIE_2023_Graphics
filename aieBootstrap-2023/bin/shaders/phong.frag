@@ -19,6 +19,7 @@ uniform vec3 AmbientColor;
 uniform vec3 LightColor;
 uniform vec3 LightDirection;
 
+
 void main()
 {
     // Set the normal and light direction

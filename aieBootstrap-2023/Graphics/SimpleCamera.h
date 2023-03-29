@@ -8,7 +8,7 @@ public:
 	~SimpleCamera() {};
 
 	virtual void Update(float deltaTime);
-	void Draw();
+	virtual void Draw();
 	glm::vec3 GetPosition() { return m_position; }
 	glm::mat4 GetViewMatrix();
 	glm::mat4 GetProjectionMatrix(float width, float height);

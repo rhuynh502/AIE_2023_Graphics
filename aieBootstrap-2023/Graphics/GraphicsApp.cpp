@@ -34,10 +34,10 @@ bool GraphicsApp::startup() {
 
 	InitialisePlanets();
 
-	m_stationaryCamera.SetPosition(glm::vec3(10, 3, 0));
+	m_stationaryCamera.SetPosition(glm::vec3(25, 3, 0));
 	m_stationaryCamera.SetRotation(glm::vec3(180, 0, 0));
-	m_stationaryCamera1.SetPosition(glm::vec3(-10, 3, 0));
-	m_stationaryCamera1.SetRotation(glm::vec3(0, 0, 0));
+	m_stationaryCamera1.SetPosition(glm::vec3(0, 25, 0));
+	m_stationaryCamera1.SetRotation(glm::vec3(0, -90, 0));
 
 	Light light;
 	light.color = { 1, 1, 1 };
@@ -117,13 +117,14 @@ void GraphicsApp::draw()
 	// wipe the screen to the background colour
 	clearScreen();
 
-	for (auto camera : m_cameras)
-		camera.Draw();
 	// update perspective based on screen size
 	// create simple camera transforms
 	m_viewMatrix = m_mainCamera->GetViewMatrix();
 	m_projectionMatrix = m_mainCamera->GetProjectionMatrix((float)getWindowWidth(),
 		(float)getWindowHeight());
+
+	for (auto camera : m_cameras)
+		camera.Draw();
 
 	auto pv = m_projectionMatrix * m_viewMatrix;
 
@@ -160,8 +161,7 @@ void GraphicsApp::draw()
 
 	clearScreen();
 
-
-	//OBJDraw(pv, m_robotTransform, &m_robotMesh);
+#pragma region PostProcess
 	// Bind the post processing shader and the texture
 	m_postProcessShader.bind();
 	m_postProcessShader.bindUniform("colorTarget", 0);
@@ -173,8 +173,12 @@ void GraphicsApp::draw()
 	m_postProcessShader.bindUniform("pixels", m_pixels);
 	m_postProcessShader.bindUniform("pixelWidth", m_pixelWidth);
 	m_postProcessShader.bindUniform("pixelHeight", m_pixelHeight);
+	m_postProcessShader.bindUniform("scanLineCount", m_scanLineCount);
+	m_postProcessShader.bindUniform("scanLineIntensity", m_scanLineIntensity);
+	m_postProcessShader.bindUniform("deltaTime", getTime());
 	m_renderTarget.getTarget(0).bind(0);
 
+#pragma endregion
 	m_fullScreenQuad.Draw();
 
 }
@@ -227,6 +231,17 @@ bool GraphicsApp::LaunchShaders()
 	}
 
 #pragma region LoadingShaders
+	m_phongShader.loadShader(aie::eShaderStage::VERTEX,
+		"./shaders/phong.vert");
+	m_phongShader.loadShader(aie::eShaderStage::FRAGMENT,
+		"./shaders/phong.frag");
+
+	if (!m_phongShader.link())
+	{
+		printf("Phong Shader Error %s\n", m_phongShader.getLastError());
+		return false;
+	}
+
 	m_normallitShader.loadShader(aie::eShaderStage::VERTEX,
 		"./shaders/normallit.vert");
 	m_normallitShader.loadShader(aie::eShaderStage::FRAGMENT,
@@ -296,15 +311,20 @@ bool GraphicsApp::LaunchShaders()
 
 #pragma region LoadingInstances
 	for(int i = 0; i < 6; i++)
-		m_scene->AddInstance(new Instance(glm::vec3(-42 + (i * 14), 0, 0), glm::vec3(0, i * 30, 0),
-			glm::vec3(1, 1, 1), &m_robotMesh, &m_normallitShader, "Robot " + std::to_string(i)));
+		m_scene->AddInstance(new Instance(glm::vec3(-15 + (i * 5), 0, 0), glm::vec3(0, i * 30, 0),
+			glm::vec3(0.5f, 0.5f, 0.5f), &m_robotMesh, &m_normallitShader, "Robot " + std::to_string(i)));
+
+	m_scene->AddInstance(new Instance(glm::vec3(0, 0, 0), glm::vec3(0), glm::vec3(1),
+		&m_bunnyMesh, &m_phongShader, "Bunny"));
 #pragma endregion
 	return true;
 }
 
 void GraphicsApp::ImGUIRefresher()
 {
+
 	ImGui::Begin("Settings");
+	ImGui::Columns(2);
 	ImGui::DragFloat3("Global Light Color", 
 		&m_scene->GetLight().color[0], 0.05, 0, 1);
 	ImGui::DragFloat3("Global Light Direction",
@@ -313,28 +333,40 @@ void GraphicsApp::ImGUIRefresher()
 	{
 		if (ImGui::Button("StationaryCamera"))
 		{
+			m_scene->SetCamera(&m_stationaryCamera);
+			m_mainCamera->ToggleCamera();
 			m_mainCamera = &m_stationaryCamera;
-			m_scene->SetCamera(m_mainCamera);
 			m_mainCamera->ToggleCamera();
 		}
 		if (ImGui::Button("StationaryCamera1"))
 		{
+			m_scene->SetCamera(&m_stationaryCamera1);
+			m_mainCamera->isMainCamera = false;
 			m_mainCamera = &m_stationaryCamera1;
-			m_scene->SetCamera(m_mainCamera);
-			m_mainCamera->ToggleCamera();
+			m_mainCamera->isMainCamera = true;
+
 		}
 		if (ImGui::Button("FlyCamera"))
 		{
+			m_scene->SetCamera(&m_camera);
+			m_mainCamera->isMainCamera = false;
 			m_mainCamera = &m_camera;
-			m_scene->SetCamera(m_mainCamera);
-			m_mainCamera->ToggleCamera();
+			m_mainCamera->isMainCamera = true;
 		}
+		ImGui::NextColumn();
 		m_mainCamera->ImGui();
 	}
-
+	ImGui::Columns(1);
+	ImGui::Columns(2);
 	if (ImGui::CollapsingHeader("Post Processing"))
 	{
 		ImGui::SliderInt("Post Processing Effect", &m_postProcessEffect, -1, 11);
+		ImGui::NextColumn();
+		if(m_postProcessEffect == 5)
+		{
+			ImGui::SliderInt("Amount of Lines", &m_scanLineCount, 1, 800);
+			ImGui::SliderFloat("Intensity of Lines", &m_scanLineIntensity, 0.1f, 0.5f);
+		}
 		if (m_postProcessEffect == 7)
 		{
 			ImGui::SliderInt("Amount of Pixels", &m_pixels, 32, 2056);
@@ -347,15 +379,17 @@ void GraphicsApp::ImGUIRefresher()
 			ImGui::SliderFloat("Gamma", &m_posterGamma, 0.1, 1.5f);
 		}
 	}
-
+	ImGui::Columns(2);
 	if (ImGui::CollapsingHeader("Planets Settings"))
 	{
 		ImGui::Checkbox(m_sun->GetName(), &m_sun->planetOn);
 		
+		ImGui::Columns(1);
 		if(ImGui::Button(m_bunnyOn ? "DEACTIVATE BUNNY" : "ACTIVATE BUNNY"))
 			m_bunnyOn = !m_bunnyOn;
 	}
-
+	ImGui::Columns(1);
+	ImGui::Columns(2);
 	if (ImGui::CollapsingHeader("Shapes Settings"))
 	{
 		ImGui::Checkbox(!m_cubeOn ? "Cube off" : "Cube On", &m_cubeOn);
@@ -539,18 +573,6 @@ void GraphicsApp::PyramidDraw(glm::mat4 pvm)
 
 bool GraphicsApp::BunnyLoader()
 {
-	m_phongShader.loadShader(aie::eShaderStage::VERTEX,
-		"./shaders/phong.vert");
-	m_phongShader.loadShader(aie::eShaderStage::FRAGMENT,
-		"./shaders/phong.frag");
-
-	if (!m_phongShader.link())
-	{
-		printf("Color Shader has an Error: %s\n",
-			m_phongShader.getLastError());
-		return false;
-	}
-
 	if (!m_bunnyMesh.load("./stanford/Bunny.obj"))
 	{
 		printf("Bunny Mesh has an Error!\n");
@@ -604,7 +626,7 @@ bool GraphicsApp::SpearLoader()
 
 void GraphicsApp::OBJDraw(glm::mat4 pvm, glm::mat4 transform, aie::OBJMesh* objMesh)
 {
-	// Bind the phong shader
+	// Bind the shader
 	m_normallitShader.bind();
 
 	m_normallitShader.bindUniform("CameraPosition",
