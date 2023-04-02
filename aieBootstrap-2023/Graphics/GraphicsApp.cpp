@@ -324,9 +324,6 @@ bool GraphicsApp::LaunchShaders()
 		m_scene->AddInstance(new Instance(glm::vec3(-15 + (i * 5), 0, 0), glm::vec3(0, i * 30, 0),
 			glm::vec3(0.5f, 0.5f, 0.5f), &m_robotMesh, &m_normallitShader, "Robot " + std::to_string(i)));
 
-	m_scene->AddInstance(new Instance(glm::vec3(0), glm::vec3(0), glm::vec3(1), &m_bunnyMesh,
-		&m_normallitShader, "Bunny"));
-
 	m_scene->AddInstance(new Instance(m_spearTransform, &m_spearMesh,
 		&m_normallitShader, "SoulSpear"));
 #pragma endregion
@@ -352,6 +349,8 @@ void GraphicsApp::ImGUIRefresher()
 			m_mainCamera = &m_stationaryCamera;
 			m_mainCamera->isMainCamera = true;
 			m_scene->SetCamera(&m_stationaryCamera);
+			// This was done better before but at an attempt to implement
+			// something else, this was broken and had to be hard coded
 			ImGui::NextColumn();
 			ImGui::DragFloat3("Cam Position", &m_mainCamera->GetPosition()[0], 0.05f);
 			ImGui::DragFloat("Theta Rotation", m_mainCamera->GetTheta(), 0.05f);
