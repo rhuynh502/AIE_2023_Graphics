@@ -21,6 +21,7 @@ public:
 	~Instance() {};
 
 	void Draw(Scene* scene);
+	void ImGui();
 
 	void ToggleOn() { instanceOn = !instanceOn; }
 
@@ -33,8 +34,13 @@ public:
 	bool instanceOn = false;
 protected:
 	glm::mat4 m_transform;
+	glm::mat4 m_baseTransform;
 	aie::OBJMesh* m_mesh;
 	aie::ShaderProgram* m_shader;
 	std::string m_instanceName;
+	float m_rotationX = 0;
+	float m_rotationY = 0;
+	float m_rotationZ = 0;
+	glm::vec3 m_scale = { 1, 1, 1 };
 };
 

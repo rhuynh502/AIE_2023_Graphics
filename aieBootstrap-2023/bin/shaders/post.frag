@@ -243,17 +243,7 @@ void main()
             FragColor = Posterization(texCoord);
             break;
         }
-        case 9: // Distance Fog
-        {
-            FragColor = Default(texCoord);
-            break;
-        }
-        case 10: // Depth Of Field
-        {
-            FragColor = Default(texCoord);
-            break;
-        }
-        case 11: // Kernel
+        case 9: // Kernel
         {
             FragColor = Kernel(texCoord);
         }

@@ -54,6 +54,7 @@ glm::vec3 Planet::GetPosition()
 	return glm::vec3(m_matrix[3][0], m_matrix[3][1], m_matrix[3][2]);
 }
 
+// Function adds a child to this planet
 void Planet::AddChild(Planet* _planet)
 {
 	Planet* parent = _planet->GetParentPlanet();
@@ -74,29 +75,19 @@ void Planet::TogglePlanet()
 
 void Planet::ImGui()
 {
-	if (!planetOn)
-		return;
-
-	ImGui::Columns(2);
-	std::string turnOff = "Turn Off ";
-	if (ImGui::Button((turnOff + m_planetName).c_str()))
+	ImGui::Begin(m_planetName);
+	if (ImGui::Button("Turn Off"))
 		planetOn = !planetOn;
+	ImGui::DragFloat("Speed", &m_rotationSpeed, 0.05f);
+	ImGui::DragFloat3("Color", &m_color[0], 0.05f, 0.f, 1.f);
 
-	std::string name = "Speed";
-	ImGui::DragFloat((m_planetName + name).c_str(),
-		&m_rotationSpeed, 0.05f);
-	std::string color = "Color";
-	ImGui::DragFloat3((m_planetName + color).c_str(),
-		&m_color[0], 0.05f, 0.f, 1.f);
-
-	std::string children = "Children";
-	ImGui::NextColumn();
-	if (m_childrenPlanets.size() > 0 && 
-		ImGui::CollapsingHeader((m_planetName + children).c_str()))
+	if (ImGui::CollapsingHeader("Children"))
 	{
 		for (auto planet : m_childrenPlanets)
 		{
 			ImGui::Checkbox(planet->GetName(), &planet->planetOn);
 		}
 	}
+
+	ImGui::End();
 }

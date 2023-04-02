@@ -4,6 +4,7 @@
 #include <list>
 #include "SimpleCamera.h"
 #include "Gizmos.h"
+#include <string>
 
 class Instance;
 
@@ -17,17 +18,24 @@ struct Light
 		color = glm::vec3(1);
 	};
 	Light(glm::vec3 position, glm::vec3 colour,
-		float intensity)
+		float intensity, const char* _name)
 	{
 		direction = position;
-		color = colour * intensity;
+		intensityCol = intensity;
+		color = colour;
+		name = _name;
 	}
 	~Light() {};
 
 	void Draw()
 	{
-		aie::Gizmos::addSphere(direction, 0.5f, 7, 7, glm::vec4(color, 0));
+		aie::Gizmos::addSphere(direction, 0.5f, 7, 7, glm::vec4(color * intensityCol, 1));
 	}
+
+	std::string GetName() { return name; }
+
+	const char* name;
+	float intensityCol = 1;
 
 	glm::vec3 direction;
 	glm::vec3 color;
@@ -45,11 +53,10 @@ public:
 	void Draw();
 	void ImGui();
 	void AddPointLights(Light light) { m_pointLights.push_back(light); }
-	void AddPointLights(glm::vec3 direction, glm::vec3 color, float intensity)
+	void AddPointLights(glm::vec3 direction, glm::vec3 color, float intensity, const char* name)
 	{
-		m_pointLights.push_back(Light(direction, color, intensity));
+		m_pointLights.push_back(Light(direction, color, intensity, name));
 	}
-
 
 	SimpleCamera* GetCamera() { return m_camera; }
 	//glm::vec2 GetWindowSize();
@@ -63,9 +70,12 @@ public:
 	glm::vec3* GetPointLightColor() { return &m_pointLightColors[0]; }
 
 	void SetCamera(SimpleCamera* camera) { m_camera = camera; }
+	void ToggleLights() { m_drawLights = !m_drawLights; }
+	bool* GetLightToggle() { return &m_drawLights; }
 
 protected:
 	SimpleCamera* m_camera;
+	std::vector<SimpleCamera> m_cameras;
 	glm::vec2 m_windowSize;
 
 	Light m_sunLight;
@@ -77,5 +87,6 @@ protected:
 
 	glm::vec3 m_pointLightPositions[MAX_LIGHTS];
 	glm::vec3 m_pointLightColors[MAX_LIGHTS];
+	bool m_drawLights = false;
 };
 

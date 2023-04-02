@@ -63,6 +63,8 @@ protected:
 
 	void PhongDraw(glm::mat4 pvm, glm::mat4 transform);
 
+	void ToggleCams();
+
 	int m_postProcessEffect = -1;
 	float m_posterNumColors = 8;
 	float m_posterGamma = 0.6f;
@@ -113,9 +115,11 @@ protected:
 	glm::mat4 m_robotTransform;
 
 	SimpleCamera* m_mainCamera;
+	SimpleCamera m_prevCamera;
 	FlyCamera m_camera;
 	StationaryCamera m_stationaryCamera;
 	StationaryCamera m_stationaryCamera1;
+	StationaryCamera m_stationaryCamera2;
 
 	//struct Light {
 	//	glm::vec3 direction;
@@ -139,4 +143,5 @@ protected:
 	bool m_inFlyCam = true;
 
 	float m_rotSpeed = 1;
+	std::vector<Light>* m_ambience = nullptr;
 };

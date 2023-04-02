@@ -16,17 +16,8 @@ void SimpleCamera::Update(float deltaTime)
 
 void SimpleCamera::Draw()
 {
-	if (isMainCamera)
-		return;
-
-	float thetaR = glm::radians(m_theta);
-	float phiR = glm::radians(m_phi + 90);
-
-	glm::vec3 forward(glm::cos(phiR) * glm::cos(thetaR), glm::sin(phiR),
-		glm::cos(phiR) * glm::sin(thetaR));
-
 	aie::Gizmos::addCylinderFilled(m_position, 0.5f, 0.5f, 10,
-		glm::vec4(forward, 0));
+		{ 1, 1, 1, 0 });
 }
 
 glm::mat4 SimpleCamera::GetViewMatrix()

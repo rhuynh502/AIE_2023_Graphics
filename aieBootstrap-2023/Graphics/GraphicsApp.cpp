@@ -20,6 +20,7 @@ GraphicsApp::~GraphicsApp() {
 
 bool GraphicsApp::startup() {
 	m_mainCamera = &m_camera;
+	m_prevCamera = m_camera;
 
 	setBackgroundColour(0.25f, 0.25f, 0.25f);
 
@@ -36,8 +37,13 @@ bool GraphicsApp::startup() {
 
 	m_stationaryCamera.SetPosition(glm::vec3(25, 3, 0));
 	m_stationaryCamera.SetRotation(glm::vec3(180, 0, 0));
+
 	m_stationaryCamera1.SetPosition(glm::vec3(0, 25, 0));
 	m_stationaryCamera1.SetRotation(glm::vec3(0, -90, 0));
+
+	m_stationaryCamera2.SetPosition(glm::vec3(0, 3, 25));
+	m_stationaryCamera2.SetRotation(glm::vec3(-90, 0, 0));
+
 
 	Light light;
 	light.color = { 1, 1, 1 };
@@ -47,16 +53,17 @@ bool GraphicsApp::startup() {
 	m_emitter->Initialise(1000, 500, .1f, 1.0f, 1, 5, 1, .1f, 
 		glm::vec4(0, 0, 1, 1), glm::vec4(0.3f, 0, 1, 1));
 
-	m_scene = new Scene(m_mainCamera, glm::vec2(getWindowWidth(), getWindowHeight()),
-		light, m_ambientLight);
-	m_mainCamera->isMainCamera = true;
-
-	m_scene->AddPointLights(glm::vec3(-3, 2, 0), glm::vec3(1, 0, 0), 30);
-	m_scene->AddPointLights(glm::vec3(3, 2, 0), glm::vec3(0, 0, 1), 30);
-
 	m_cameras.push_back(m_camera);
 	m_cameras.push_back(m_stationaryCamera);
 	m_cameras.push_back(m_stationaryCamera1);
+	m_cameras.push_back(m_stationaryCamera2);
+
+	m_scene = new Scene(&m_camera, glm::vec2(getWindowWidth(), getWindowHeight()),
+		light, m_ambientLight);
+	m_mainCamera->isMainCamera = true;
+
+	m_scene->AddPointLights(glm::vec3(-3, 2, 0), glm::vec3(1, 0, 0), 30, "light1");
+	m_scene->AddPointLights(glm::vec3(3, 2, 0), glm::vec3(0, 0, 1), 30, "light2");
 
 	return LaunchShaders();
 }
@@ -99,8 +106,8 @@ void GraphicsApp::update(float deltaTime) {
 	// Rotate the light to emulate a 'day/night' cycle
 	m_scene->GetLight().direction = glm::normalize(glm::vec3(glm::cos(time * 2), glm::sin(time * 2), 0));
 
-	m_emitter->Update(deltaTime, m_mainCamera->GetWorldTransform(
-		m_mainCamera->GetPosition(), glm::vec3(0), glm::vec3(1)));
+	m_emitter->Update(deltaTime, m_scene->GetCamera()->GetWorldTransform(
+		m_scene->GetCamera()->GetPosition(), glm::vec3(0), glm::vec3(1)));
 
 	if (input->isKeyDown(aie::INPUT_KEY_ESCAPE))
 		quit();
@@ -119,12 +126,9 @@ void GraphicsApp::draw()
 
 	// update perspective based on screen size
 	// create simple camera transforms
-	m_viewMatrix = m_mainCamera->GetViewMatrix();
-	m_projectionMatrix = m_mainCamera->GetProjectionMatrix((float)getWindowWidth(),
+	m_viewMatrix = m_scene->GetCamera()->GetViewMatrix();
+	m_projectionMatrix = m_scene->GetCamera()->GetProjectionMatrix((float)getWindowWidth(),
 		(float)getWindowHeight());
-
-	for (auto camera : m_cameras)
-		camera.Draw();
 
 	auto pv = m_projectionMatrix * m_viewMatrix;
 
@@ -153,6 +157,12 @@ void GraphicsApp::draw()
 	m_particleShader.bind();
 	m_particleShader.bindUniform("ProjectionViewModel", pv * m_particleEmitTransform);
 	m_emitter->Draw();
+	
+	/*for (auto begin = m_cameras.begin(); begin != m_cameras.end(); begin++)
+	{
+		if (!begin._Ptr->isMainCamera)
+			begin._Ptr->Draw();
+	}*/
 
 	Gizmos::draw(m_projectionMatrix * m_viewMatrix);
 
@@ -314,82 +324,133 @@ bool GraphicsApp::LaunchShaders()
 		m_scene->AddInstance(new Instance(glm::vec3(-15 + (i * 5), 0, 0), glm::vec3(0, i * 30, 0),
 			glm::vec3(0.5f, 0.5f, 0.5f), &m_robotMesh, &m_normallitShader, "Robot " + std::to_string(i)));
 
-	m_scene->AddInstance(new Instance(glm::vec3(0, 0, 0), glm::vec3(0), glm::vec3(1),
-		&m_bunnyMesh, &m_phongShader, "Bunny"));
+	m_scene->AddInstance(new Instance(glm::vec3(0), glm::vec3(0), glm::vec3(1), &m_bunnyMesh,
+		&m_normallitShader, "Bunny"));
+
+	m_scene->AddInstance(new Instance(m_spearTransform, &m_spearMesh,
+		&m_normallitShader, "SoulSpear"));
 #pragma endregion
 	return true;
 }
 
 void GraphicsApp::ImGUIRefresher()
 {
-
 	ImGui::Begin("Settings");
 	ImGui::Columns(2);
+	// ImGui for global light settings
 	ImGui::DragFloat3("Global Light Color", 
 		&m_scene->GetLight().color[0], 0.05, 0, 1);
 	ImGui::DragFloat3("Global Light Direction",
 		&m_scene->GetLight().direction[0], 0.05, -1, 1);
+	// ImGui for camera settings
 	if (ImGui::CollapsingHeader("Camera Settings"))
 	{
 		if (ImGui::Button("StationaryCamera"))
 		{
-			m_scene->SetCamera(&m_stationaryCamera);
-			m_mainCamera->ToggleCamera();
+			ToggleCams();
+			m_mainCamera->isMainCamera = false;
 			m_mainCamera = &m_stationaryCamera;
-			m_mainCamera->ToggleCamera();
+			m_mainCamera->isMainCamera = true;
+			m_scene->SetCamera(&m_stationaryCamera);
+			ImGui::NextColumn();
+			ImGui::DragFloat3("Cam Position", &m_mainCamera->GetPosition()[0], 0.05f);
+			ImGui::DragFloat("Theta Rotation", m_mainCamera->GetTheta(), 0.05f);
+			ImGui::DragFloat("Phi Rotation", m_mainCamera->GetPhi(), 0.05f);
 		}
 		if (ImGui::Button("StationaryCamera1"))
 		{
-			m_scene->SetCamera(&m_stationaryCamera1);
+			ToggleCams();
 			m_mainCamera->isMainCamera = false;
 			m_mainCamera = &m_stationaryCamera1;
 			m_mainCamera->isMainCamera = true;
-
+			m_scene->SetCamera(&m_stationaryCamera1);
+			ImGui::NextColumn();
+			ImGui::DragFloat3("Cam Position", &m_mainCamera->GetPosition()[0], 0.05f);
+			ImGui::DragFloat("Theta Rotation", m_mainCamera->GetTheta(), 0.05f);
+			ImGui::DragFloat("Phi Rotation", m_mainCamera->GetPhi(), 0.05f);
+		}
+		if (ImGui::Button("StationaryCamera2"))
+		{
+			ToggleCams();
+			m_mainCamera->isMainCamera = false;
+			m_mainCamera = &m_stationaryCamera2;
+			m_mainCamera->isMainCamera = true;
+			m_scene->SetCamera(&m_stationaryCamera2);
+			ImGui::NextColumn();
+			ImGui::DragFloat3("Cam Position", &m_mainCamera->GetPosition()[0], 0.05f);
+			ImGui::DragFloat("Theta Rotation", m_mainCamera->GetTheta(), 0.05f);
+			ImGui::DragFloat("Phi Rotation", m_mainCamera->GetPhi(), 0.05f);
 		}
 		if (ImGui::Button("FlyCamera"))
 		{
-			m_scene->SetCamera(&m_camera);
+			ToggleCams();
 			m_mainCamera->isMainCamera = false;
 			m_mainCamera = &m_camera;
 			m_mainCamera->isMainCamera = true;
+			m_scene->SetCamera(&m_camera); ImGui::NextColumn(); 
+			ImGui::DragFloat("Rotation Speed", m_mainCamera->GetRotationSpeed(),
+				0.1f, 0.1f, 40.f);
 		}
 		ImGui::NextColumn();
 		m_mainCamera->ImGui();
 	}
 	ImGui::Columns(1);
 	ImGui::Columns(2);
+	// ImGui for post processing
 	if (ImGui::CollapsingHeader("Post Processing"))
 	{
-		ImGui::SliderInt("Post Processing Effect", &m_postProcessEffect, -1, 11);
+		ImGui::SliderInt("Post Processing Effect", &m_postProcessEffect, -1, 9);
 		ImGui::NextColumn();
+		
+		if (m_postProcessEffect == 0)
+			ImGui::Text("Box Blur");
+		if (m_postProcessEffect == 1)
+			ImGui::Text("Distort");
+		if (m_postProcessEffect == 2)
+			ImGui::Text("Edge Detection");
+		if (m_postProcessEffect == 3)
+			ImGui::Text("GreyScale");
+		if (m_postProcessEffect == 4)
+			ImGui::Text("Sepia");
 		if(m_postProcessEffect == 5)
 		{
+			ImGui::Text("Scanlines");
 			ImGui::SliderInt("Amount of Lines", &m_scanLineCount, 1, 800);
 			ImGui::SliderFloat("Intensity of Lines", &m_scanLineIntensity, 0.1f, 0.5f);
 		}
+		if (m_postProcessEffect == 6)
+			ImGui::Text("Invert");
 		if (m_postProcessEffect == 7)
 		{
+			ImGui::Text("Pixelation");
 			ImGui::SliderInt("Amount of Pixels", &m_pixels, 32, 2056);
 			ImGui::SliderFloat("Pixel Width", &m_pixelWidth, 0.1f, 25);
 			ImGui::SliderFloat("Pixel Height", &m_pixelHeight, 0.1f, 25);
 		}
 		if (m_postProcessEffect == 8)
 		{
+			ImGui::Text("Posterization");
 			ImGui::SliderFloat("Number of Colors", &m_posterNumColors, 3.2f, 20);
 			ImGui::SliderFloat("Gamma", &m_posterGamma, 0.1, 1.5f);
 		}
+		if (m_postProcessEffect == 9)
+		{
+			ImGui::Text("Kernel Convolution");
+			
+		}
 	}
 	ImGui::Columns(2);
+	// ImGui for planet settings
 	if (ImGui::CollapsingHeader("Planets Settings"))
 	{
 		ImGui::Checkbox(m_sun->GetName(), &m_sun->planetOn);
 		
 		ImGui::Columns(1);
-		if(ImGui::Button(m_bunnyOn ? "DEACTIVATE BUNNY" : "ACTIVATE BUNNY"))
-			m_bunnyOn = !m_bunnyOn;
+		
 	}
 	ImGui::Columns(1);
 	ImGui::Columns(2);
+	// ImGui for shapes settings
 	if (ImGui::CollapsingHeader("Shapes Settings"))
 	{
 		ImGui::Checkbox(!m_cubeOn ? "Cube off" : "Cube On", &m_cubeOn);
@@ -408,7 +469,31 @@ void GraphicsApp::ImGUIRefresher()
 		if(m_pyramidOn)
 			ImGui::DragFloat3("Pyramid Position",
 				&m_pyramidTransform[3][0]);
+		ImGui::Text("Emitter");
+		ImGui::DragFloat3("Emitter", &m_particleEmitTransform[3][0], 0.05f);
+
+		if (ImGui::Button(m_bunnyOn ? "DEACTIVATE BUNNY" : "ACTIVATE BUNNY"))
+			m_bunnyOn = !m_bunnyOn;
 	}
+
+	if (ImGui::CollapsingHeader("Lights Settings"))
+	{
+		if (m_ambience == nullptr)
+			m_ambience = &m_scene->GetPointLights();
+
+		ImGui::Checkbox("Toggle Lights", m_scene->GetLightToggle());
+
+		for (auto begin = m_ambience->begin(); begin != m_ambience->end(); begin++)
+		{
+			ImGui::DragFloat3((begin[0].GetName() + " Direction").c_str(),
+				&begin[0].direction[0], 0.05f);
+			ImGui::DragFloat3((begin[0].GetName() + " Color").c_str(), 
+				&begin[0].color[0], 0.05f, 0.f, 1.f);
+			ImGui::DragFloat((begin[0].GetName() + " Intensity").c_str(),
+				&begin[0].intensityCol, 0.05f, 0.f);
+		}
+	}
+
 	ImGui::End();
 
 	m_scene->ImGui();
@@ -650,7 +735,20 @@ void GraphicsApp::OBJDraw(glm::mat4 pvm, glm::mat4 transform, aie::OBJMesh* objM
 
 bool GraphicsApp::OBJLoader(aie::OBJMesh& objMesh, glm::mat4& transform, float scale, const char* filepath, bool flipTexture)
 {
-	return false;
+	if (!objMesh.load(filepath, true, flipTexture))
+	{
+		printf("Mesh has an Error!\n");
+		return false;
+	}
+
+	transform = {
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	};
+
+	return true;
 }
 
 bool GraphicsApp::RobotLoader()
@@ -847,5 +945,13 @@ void GraphicsApp::PhongDraw(glm::mat4 pvm, glm::mat4 transform)
 	m_phongShader.bindUniform("ModelMatrix", transform);
 
 	m_bunnyMesh.draw();
+}
+
+void GraphicsApp::ToggleCams()
+{
+	for (auto begin = m_cameras.begin(); begin != m_cameras.end(); begin++)
+	{
+		begin._Ptr->isMainCamera = false;
+	}
 }
 

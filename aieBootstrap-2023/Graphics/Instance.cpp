@@ -5,12 +5,13 @@
 #include "OBJMesh.h"
 #include "Texture.h"
 #include "GraphicsApp.h"
+#include <imgui.h>
 
 Instance::Instance(glm::mat4 transform, aie::OBJMesh* mesh,
 	aie::ShaderProgram* shader, std::string instanceName) :
 	m_transform(transform), m_mesh(mesh), m_shader(shader), m_instanceName(instanceName)
 {
-
+	m_baseTransform = m_transform;
 }
 
 Instance::Instance(glm::vec3 position, glm::vec3 eulerAngles, glm::vec3 scale,
@@ -18,6 +19,7 @@ Instance::Instance(glm::vec3 position, glm::vec3 eulerAngles, glm::vec3 scale,
 	m_mesh(mesh), m_shader(shader), m_instanceName(instanceName)
 {
 	m_transform = MakeTransform(position, eulerAngles, scale);
+	m_baseTransform = m_transform;
 }
 
 void Instance::Draw(Scene* scene)
@@ -53,6 +55,34 @@ void Instance::Draw(Scene* scene)
 
 
 	m_mesh->draw();
+}
+
+void Instance::ImGui()
+{
+	if (!instanceOn)
+		return;
+
+	if (ImGui::DragFloat3((m_instanceName + " Pos").c_str(), &m_transform[3][0], 0.05f))
+		m_baseTransform[3] = m_transform[3];
+
+	if(ImGui::SliderAngle((m_instanceName + " RotX").c_str(), &m_rotationX))
+		m_transform = glm::rotate(m_baseTransform, m_rotationX,
+			glm::vec3(1, 0, 0));
+
+	if (ImGui::SliderAngle((m_instanceName + " RotY").c_str(), &m_rotationY))
+		m_transform = glm::rotate(m_baseTransform, m_rotationY,
+			glm::vec3(0, 1, 0));
+
+	if (ImGui::SliderAngle((m_instanceName + " RotZ").c_str(), &m_rotationZ))
+		m_transform = glm::rotate(m_baseTransform, m_rotationZ,
+			glm::vec3(0, 0, 1));
+
+	if (ImGui::DragFloat((m_instanceName + " Scale").c_str(), &m_scale[0], 0.05f))
+	{
+		m_scale[1] = m_scale[0];
+		m_scale[2] = m_scale[0];
+		m_transform = glm::scale(glm::translate(m_baseTransform, {0, 0, 0}), m_scale);
+	}
 }
 
 glm::mat4 Instance::MakeTransform(glm::vec3 position, glm::vec3 eulerAngles, glm::vec3 scale)
