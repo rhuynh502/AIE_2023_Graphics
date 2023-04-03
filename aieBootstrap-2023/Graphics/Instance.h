@@ -41,6 +41,10 @@ protected:
 	float m_rotationX = 0;
 	float m_rotationY = 0;
 	float m_rotationZ = 0;
-	glm::vec3 m_scale = { 1, 1, 1 };
+	glm::vec3 m_curRotation = glm::vec3(0);
+	glm::vec3 m_prevRotation = glm::vec3(0);
+
+	float m_scale = 1;
+	float m_prevScale = 1;
 };
 

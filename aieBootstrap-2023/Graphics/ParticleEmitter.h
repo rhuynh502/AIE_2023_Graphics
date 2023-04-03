@@ -38,6 +38,9 @@ public:
 		float _startSize, float _endSize,
 		const glm::vec4& _startColor, const glm::vec4& _endColor);
 
+	glm::vec4* GetStartColor() { return &m_startColor; }
+	glm::vec4* GetEndColor() { return &m_endColor; }
+
 	void Emit();
 	void Update(float _deltaTime, const glm::mat4& _cameraTransform);
 	void Draw();

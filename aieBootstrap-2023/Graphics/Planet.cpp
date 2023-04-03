@@ -24,7 +24,7 @@ void Planet::Update(float _deltaTime)
 	for (auto planet : m_childrenPlanets)
 		planet->Update(_deltaTime);
 
-	if (!planetOn)
+	if (!m_planetOn)
 		return;
 
 	m_rotation += m_rotationSpeed * _deltaTime;
@@ -34,7 +34,7 @@ void Planet::Update(float _deltaTime)
 			glm::vec3(sin(m_rotation) * m_distFromSun, m_axis * sin(m_rotation) * m_distFromSun, cos(m_rotation) * m_distFromSun))[3];
 
 	m_matrix = glm::rotate(m_matrix, _deltaTime * 1.6f, glm::vec3(0, 1, 0));
-	ImGui();
+	//ImGui();
 }
 
 void Planet::Draw()
@@ -42,7 +42,7 @@ void Planet::Draw()
 	for (auto planet : m_childrenPlanets)
 		planet->Draw();
 
-	if (!planetOn)
+	if (!m_planetOn)
 		return;
 	aie::Gizmos::addSphere(GetPosition(), m_radius, 8, 8, m_color, &m_matrix);
 	if (m_hasRing)
@@ -70,24 +70,26 @@ void Planet::AddChild(Planet* _planet)
 
 void Planet::TogglePlanet()
 {
-	planetOn = !planetOn;
+	m_planetOn = !m_planetOn;
 }
 
 void Planet::ImGui()
 {
-	ImGui::Begin(m_planetName);
-	if (ImGui::Button("Turn Off"))
-		planetOn = !planetOn;
-	ImGui::DragFloat("Speed", &m_rotationSpeed, 0.05f);
-	ImGui::DragFloat3("Color", &m_color[0], 0.05f, 0.f, 1.f);
-
-	if (ImGui::CollapsingHeader("Children"))
+	ImGui::Checkbox(("Toggle " + m_planetName).c_str(), &m_planetOn);
+	if (m_planetOn)
 	{
-		for (auto planet : m_childrenPlanets)
-		{
-			ImGui::Checkbox(planet->GetName(), &planet->planetOn);
-		}
+		ImGui::DragFloat("Speed", &m_rotationSpeed, 0.05f);
+		ImGui::DragFloat3("Color", &m_color[0], 0.05f, 0.f, 1.f);
 	}
 
-	ImGui::End();
+	if (m_childrenPlanets.size() != 0)
+	{
+		if (ImGui::CollapsingHeader((m_planetName + " Children").c_str()))
+		{
+			for (auto planet : m_childrenPlanets)
+			{
+				planet->ImGui();
+			}
+		}
+	}
 }

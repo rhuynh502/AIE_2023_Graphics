@@ -375,10 +375,7 @@ void GraphicsApp::ImGUIRefresher()
 			m_mainCamera = &m_stationaryCamera2;
 			m_mainCamera->isMainCamera = true;
 			m_scene->SetCamera(&m_stationaryCamera2);
-			ImGui::NextColumn();
-			ImGui::DragFloat3("Cam Position", &m_mainCamera->GetPosition()[0], 0.05f);
-			ImGui::DragFloat("Theta Rotation", m_mainCamera->GetTheta(), 0.05f);
-			ImGui::DragFloat("Phi Rotation", m_mainCamera->GetPhi(), 0.05f);
+			
 		}
 		if (ImGui::Button("FlyCamera"))
 		{
@@ -442,7 +439,7 @@ void GraphicsApp::ImGUIRefresher()
 	// ImGui for planet settings
 	if (ImGui::CollapsingHeader("Planets Settings"))
 	{
-		ImGui::Checkbox(m_sun->GetName(), &m_sun->planetOn);
+		m_sun->ImGui();
 		
 		ImGui::Columns(1);
 		
@@ -470,6 +467,8 @@ void GraphicsApp::ImGUIRefresher()
 				&m_pyramidTransform[3][0]);
 		ImGui::Text("Emitter");
 		ImGui::DragFloat3("Emitter", &m_particleEmitTransform[3][0], 0.05f);
+		ImGui::DragFloat3("Initial Color", &m_emitter->GetStartColor()[0][0], 0.05f, 0.f, 1.f);
+		ImGui::DragFloat3("Final Color", &m_emitter->GetEndColor()[0][0], 0.05f, 0.f, 1.f);
 
 		if (ImGui::Button(m_bunnyOn ? "DEACTIVATE BUNNY" : "ACTIVATE BUNNY"))
 			m_bunnyOn = !m_bunnyOn;

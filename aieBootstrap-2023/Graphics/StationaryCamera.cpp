@@ -10,7 +10,9 @@ StationaryCamera::StationaryCamera()
 
 void StationaryCamera::ImGui()
 {
-	
+	ImGui::DragFloat3("Cam Position", &GetPosition()[0], 0.05f);
+	ImGui::DragFloat("Theta Rotation", GetTheta(), 0.05f);
+	ImGui::DragFloat("Phi Rotation", GetPhi(), 0.05f);
 }
 
 void StationaryCamera::SetRotation(glm::vec3 rotation)

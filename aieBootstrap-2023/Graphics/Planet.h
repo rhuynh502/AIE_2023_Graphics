@@ -1,6 +1,7 @@
 #pragma once
 #include <glm/mat4x4.hpp>
 #include <vector>
+#include <string>
 
 class Planet
 {
@@ -18,7 +19,7 @@ public:
 	glm::mat4 GetMatrix() { return m_matrix; }
 	float GetDistFromSun() { return m_distFromSun; }
 	Planet* GetParentPlanet() { return m_parentPlanet; }
-	const char* GetName() { return m_planetName; }
+	std::string GetName() { return m_planetName; }
 
 	// setters
 	void SetMatrix(glm::mat4 _matrix) { m_matrix = _matrix; }
@@ -32,7 +33,11 @@ public:
 
 	void TogglePlanet();
 
-	bool planetOn = false;
+	// Getters
+	bool IsPlanetOn() { return m_planetOn; }
+	bool* PlanetOn() { return &m_planetOn; }
+
+	
 
 protected:
 	glm::mat4 m_matrix;
@@ -45,7 +50,8 @@ protected:
 	bool m_hasRing;
 	float m_axis = 0;
 	float m_rotation = 0;
-	const char* m_planetName;
+	std::string m_planetName;
 
+	bool m_planetOn = false;
 };
 

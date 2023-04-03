@@ -65,24 +65,23 @@ void Instance::ImGui()
 	if (ImGui::DragFloat3((m_instanceName + " Pos").c_str(), &m_transform[3][0], 0.05f))
 		m_baseTransform[3] = m_transform[3];
 
-	if(ImGui::SliderAngle((m_instanceName + " RotX").c_str(), &m_rotationX))
-		m_transform = glm::rotate(m_baseTransform, m_rotationX,
-			glm::vec3(1, 0, 0));
-
-	if (ImGui::SliderAngle((m_instanceName + " RotY").c_str(), &m_rotationY))
-		m_transform = glm::rotate(m_baseTransform, m_rotationY,
-			glm::vec3(0, 1, 0));
-
-	if (ImGui::SliderAngle((m_instanceName + " RotZ").c_str(), &m_rotationZ))
-		m_transform = glm::rotate(m_baseTransform, m_rotationZ,
-			glm::vec3(0, 0, 1));
-
-	if (ImGui::DragFloat((m_instanceName + " Scale").c_str(), &m_scale[0], 0.05f))
+	if (ImGui::DragFloat3((m_instanceName + " Rotation").c_str(), &m_curRotation[0], 0.1f))
 	{
-		m_scale[1] = m_scale[0];
-		m_scale[2] = m_scale[0];
-		m_transform = glm::scale(glm::translate(m_baseTransform, {0, 0, 0}), m_scale);
+		glm::vec3 diff = m_curRotation - m_prevRotation;
+		m_transform = glm::rotate(m_transform, diff[0], glm::vec3(1, 0, 0));
+		m_transform = glm::rotate(m_transform, diff[1], glm::vec3(0, 1, 0));
+		m_transform = glm::rotate(m_transform, diff[2], glm::vec3(0, 0, 1));
+		m_prevRotation = m_curRotation;
 	}
+
+	if (ImGui::DragFloat((m_instanceName + " Scale").c_str(), &m_scale, 0.05f, 0.1f, INFINITY))
+	{
+		float diff = m_scale / m_prevScale;
+		m_transform = glm::scale(glm::translate(m_transform, {0, 0, 0}), glm::vec3(diff));
+		m_prevScale = m_scale;
+	}
+
+
 }
 
 glm::mat4 Instance::MakeTransform(glm::vec3 position, glm::vec3 eulerAngles, glm::vec3 scale)
